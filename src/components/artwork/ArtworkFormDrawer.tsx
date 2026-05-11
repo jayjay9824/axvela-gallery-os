@@ -227,6 +227,23 @@ function ArtworkForm({ artwork, onCancel }: ArtworkFormProps) {
   const curationSectionRef = React.useRef<HTMLElement | null>(null);
   const pricingSectionRef = React.useRef<HTMLElement | null>(null);
 
+  // STEP 126 Phase 3 — TabBar 클릭 → 해당 section scrollIntoView (sticky
+  // anchor navigation). activeTab 도 즉시 동기화 — Phase 4 합류 전까지는 클릭만
+  // active 갱신 (스크롤 추적은 Phase 4 에서 IntersectionObserver 가 담당).
+  // refs 는 useRef 로 stable — 빈 deps 배열 안전.
+  const handleAnchorTabChange = React.useCallback((next: TabKey) => {
+    setActiveTab(next);
+    const target =
+      next === "image"
+        ? imageSectionRef.current
+        : next === "artwork"
+          ? artworkSectionRef.current
+          : next === "curation"
+            ? curationSectionRef.current
+            : pricingSectionRef.current;
+    target?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
+
   const [submitted, setSubmitted] = React.useState(false);
 
   // ---- Validation -----------------------------------------------------------
@@ -421,13 +438,18 @@ function ArtworkForm({ artwork, onCancel }: ArtworkFormProps) {
             사용자 spec 정조준 — Tab 1 이미지 (STEP 116 Hero 합류) / Tab 2 작품
             정보 (기본 정보 + 작품 정보 통합) / Tab 3 큐레이션 (STEP 119 5 inline
             fields functional 진입) / Tab 4 거래 (가격/상태). 9-tab over-scope
-            지양 — Artwork own data 만 담당하는 정직한 4-tab. */}
+            지양 — Artwork own data 만 담당하는 정직한 4-tab.
+            STEP 126 Phase 3 — sticky anchor TabBar. scroll container top 에
+            pin → 4 section 어디로 스크롤해도 navigation 가시. onChange 가
+            scrollIntoView 호출 → 클릭 시 해당 section 점프. -mx-6 + px-6:
+            form body 의 px-6 padding 을 상쇄, sticky bar 를 scroll container
+            전폭으로 확장하면서 internal padding 유지. */}
         <TabBar
           tabs={TAB_DEFINITIONS}
           activeKey={activeTab}
-          onChange={setActiveTab}
+          onChange={handleAnchorTabChange}
           ariaLabel="작품 등록 단계"
-          className="mb-5"
+          className="sticky top-0 z-10 bg-surface -mx-6 px-6 mb-5"
         />
 
         {/* STEP 126 Phase 2 — 4 section 동시 mount. 기존 4-panel 토글
@@ -437,7 +459,14 @@ function ArtworkForm({ artwork, onCancel }: ArtworkFormProps) {
             workflow 가 하나의 document). */}
         <div className="flex flex-col gap-8">
           {/* ─── Section: 이미지 (STEP 116 Hero 합류, 상시 mount) ──────── */}
-          <section id="form-section-image" ref={imageSectionRef}>
+          {/* STEP 126 Phase 3 — scroll-mt-12 (48px): sticky TabBar 가 ~40px
+              높이라 scrollIntoView 시 section top 이 TabBar 아래로 안착하도록
+              offset. 4 section 모두 동일 적용. */}
+          <section
+            id="form-section-image"
+            ref={imageSectionRef}
+            className="scroll-mt-12"
+          >
             {/* STEP 116 — Image-First Registration Hero. */}
             <ArtworkUploadHero
               imageUrl={imageMeta?.url}
@@ -468,7 +497,11 @@ function ArtworkForm({ artwork, onCancel }: ArtworkFormProps) {
               상태에서 autoFocus 가 Drawer open 직후 title 로 강제 포커스 →
               브라우저 자동 scroll 로 image-first hierarchy (STEP 116) 무력화.
               사용자는 Hero 부터 시각 진입 후 의도적으로 title 영역 도달. */}
-          <section id="form-section-artwork" ref={artworkSectionRef}>
+          <section
+            id="form-section-artwork"
+            ref={artworkSectionRef}
+            className="scroll-mt-12"
+          >
             <FormSection label="기본 정보">
               <TextField
                 label="제목"
@@ -554,7 +587,11 @@ function ArtworkForm({ artwork, onCancel }: ArtworkFormProps) {
           </section>
 
           {/* ─── Section: 큐레이션 (STEP 119 5 inline fields functional) ─── */}
-          <section id="form-section-curation" ref={curationSectionRef}>
+          <section
+            id="form-section-curation"
+            ref={curationSectionRef}
+            className="scroll-mt-12"
+          >
             <FormSection label="큐레이션 / 전시 / 기록">
               {/* STEP 118 합류 — STEP 119 5 inline fields functional 진입.
                   모두 free-form, optional. CurationNote (formal entity) 와는
@@ -603,7 +640,11 @@ function ArtworkForm({ artwork, onCancel }: ArtworkFormProps) {
           </section>
 
           {/* ─── Section: 거래 (가격 / 상태) ─────────────────────────── */}
-          <section id="form-section-pricing" ref={pricingSectionRef}>
+          <section
+            id="form-section-pricing"
+            ref={pricingSectionRef}
+            className="scroll-mt-12"
+          >
             <FormSection label="거래">
               <TextField
                 label="가격"
