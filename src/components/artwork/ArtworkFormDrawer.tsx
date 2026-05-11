@@ -214,7 +214,18 @@ function ArtworkForm({ artwork, onCancel }: ArtworkFormProps) {
   // ── STEP 118 — 4-tab UI state ────────────────────────────────────────────
   // Tab 1 image / Tab 2 작품 정보 / Tab 3 큐레이션 / Tab 4 거래.
   // 새 작품 등록 시 image-first hierarchy 정합 (STEP 116) — Tab 1 시작.
+  // STEP 126 Phase 2 — 4-panel conditional toggle 구조를 4-section 상시 mount
+  // + sticky anchor navigation 으로 전환. activeTab state 는 보존 — Phase 3
+  // 에서 scrollIntoView trigger, Phase 4 에서 IntersectionObserver setter 가
+  // 사용. 현재(Phase 2)는 TabBar 클릭만 setter 호출 (panel 토글 효과는 없음).
   const [activeTab, setActiveTab] = React.useState<TabKey>("image");
+
+  // STEP 126 Phase 2 — Section refs. Phase 3 scrollIntoView target / Phase 4
+  // IntersectionObserver observe target.
+  const imageSectionRef = React.useRef<HTMLElement | null>(null);
+  const artworkSectionRef = React.useRef<HTMLElement | null>(null);
+  const curationSectionRef = React.useRef<HTMLElement | null>(null);
+  const pricingSectionRef = React.useRef<HTMLElement | null>(null);
 
   const [submitted, setSubmitted] = React.useState(false);
 
@@ -419,9 +430,14 @@ function ArtworkForm({ artwork, onCancel }: ArtworkFormProps) {
           className="mb-5"
         />
 
-        {/* ─── Tab 1: 이미지 (STEP 116 Hero 합류) ────────────────────── */}
-        {activeTab === "image" && (
-          <>
+        {/* STEP 126 Phase 2 — 4 section 동시 mount. 기존 4-panel 토글
+            (activeTab === "x" && ...) 제거. activeTab state 는 보존 (Phase 3
+            scrollIntoView / Phase 4 IntersectionObserver 합류 예정).
+            gap-8 inter-section spacing — 사용자 spec UX 구조 보존 (전체
+            workflow 가 하나의 document). */}
+        <div className="flex flex-col gap-8">
+          {/* ─── Section: 이미지 (STEP 116 Hero 합류, 상시 mount) ──────── */}
+          <section id="form-section-image" ref={imageSectionRef}>
             {/* STEP 116 — Image-First Registration Hero. */}
             <ArtworkUploadHero
               imageUrl={imageMeta?.url}
@@ -445,12 +461,14 @@ function ArtworkForm({ artwork, onCancel }: ArtworkFormProps) {
                   />
                 </div>
               )}
-          </>
-        )}
+          </section>
 
-        {/* ─── Tab 2: 작품 정보 (제목 / 작가 / 연도 / 매체 / 치수) ───── */}
-        {activeTab === "artwork" && (
-          <>
+          {/* ─── Section: 작품 정보 (제목 / 작가 / 연도 / 매체 / 치수) ─── */}
+          {/* STEP 126 Phase 2 — title 의 autoFocus 제거: 4 section 상시 mount
+              상태에서 autoFocus 가 Drawer open 직후 title 로 강제 포커스 →
+              브라우저 자동 scroll 로 image-first hierarchy (STEP 116) 무력화.
+              사용자는 Hero 부터 시각 진입 후 의도적으로 title 영역 도달. */}
+          <section id="form-section-artwork" ref={artworkSectionRef}>
             <FormSection label="기본 정보">
               <TextField
                 label="제목"
@@ -459,7 +477,6 @@ function ArtworkForm({ artwork, onCancel }: ArtworkFormProps) {
                 onChange={(e) => setTitle(e.target.value)}
                 error={showError("title")}
                 placeholder="예: 무제, 푸른 정원"
-                autoFocus
               />
               <TextField
                 label="작가"
@@ -534,92 +551,92 @@ function ArtworkForm({ artwork, onCancel }: ArtworkFormProps) {
                 }}
               />
             </FormSection>
-          </>
-        )}
+          </section>
 
-        {/* ─── Tab 3: 큐레이션 (STEP 119 5 inline fields functional) ─── */}
-        {activeTab === "curation" && (
-          <FormSection label="큐레이션 / 전시 / 기록">
-            {/* STEP 118 합류 — STEP 119 5 inline fields functional 진입.
-                모두 free-form, optional. CurationNote (formal entity) 와는
-                별도 dimension — Artwork master record 직접 inline. */}
-            <CurationTextField
-              label="작품 설명"
-              hint="자유 텍스트 — 매체/치수 외 자유 해설"
-              value={description}
-              onChange={setDescription}
-              placeholder="예: 이 작품은 2024년 작가의 베니스 비엔날레 출품 시리즈 중 하나로..."
-              rows={3}
-            />
-            <CurationTextField
-              label="큐레이션 초안"
-              hint="CurationNote 만들기 전 quick note 또는 보조 메모"
-              value={curationDraft}
-              onChange={setCurationDraft}
-              placeholder="간단한 큐레이션 메모"
-              rows={3}
-            />
-            <CurationTextField
-              label="전시 설명"
-              hint="전시 컨텍스트 / 전시 기획서 텍스트"
-              value={exhibitionText}
-              onChange={setExhibitionText}
-              placeholder="예: 2024 베니스 비엔날레 한국관 출품작"
-              rows={3}
-            />
-            <CurationTextField
-              label="작가 메모 (Artist Note)"
-              hint="작가 본인의 work statement"
-              value={artistNote}
-              onChange={setArtistNote}
-              placeholder="작가가 직접 남긴 작품 노트"
-              rows={3}
-            />
-            <CurationTextField
-              label="Provenance / 소장 이력"
-              hint="출처 / 이전 소유자 / 전시 이력 메모"
-              value={provenanceNote}
-              onChange={setProvenanceNote}
-              placeholder="예: 1990년 작가 직접 매입 → 2010년 OOO 갤러리 → 현재"
-              rows={3}
-            />
-          </FormSection>
-        )}
-
-        {/* ─── Tab 4: 거래 (가격 / 상태) ──────────────────────────── */}
-        {activeTab === "pricing" && (
-          <FormSection label="거래">
-            <TextField
-              label="가격"
-              required
-              inputMode="numeric"
-              value={priceDisplay}
-              onChange={(e) => handlePriceChange(e.target.value)}
-              error={showError("priceKRW")}
-              placeholder="0"
-              suffix="KRW"
-            />
-            {/* STEP 18 — AXVELA AI Price Suggestion (rule_18 (c)) */}
-            {isEdit && artwork && (
-              <PriceSuggestionPanel
-                artwork={artwork}
-                onApplyMid={(midValue) => setPriceRaw(midValue.toString())}
+          {/* ─── Section: 큐레이션 (STEP 119 5 inline fields functional) ─── */}
+          <section id="form-section-curation" ref={curationSectionRef}>
+            <FormSection label="큐레이션 / 전시 / 기록">
+              {/* STEP 118 합류 — STEP 119 5 inline fields functional 진입.
+                  모두 free-form, optional. CurationNote (formal entity) 와는
+                  별도 dimension — Artwork master record 직접 inline. */}
+              <CurationTextField
+                label="작품 설명"
+                hint="자유 텍스트 — 매체/치수 외 자유 해설"
+                value={description}
+                onChange={setDescription}
+                placeholder="예: 이 작품은 2024년 작가의 베니스 비엔날레 출품 시리즈 중 하나로..."
+                rows={3}
               />
-            )}
-            <Select
-              label="상태"
-              required
-              value={state}
-              onChange={(e) => setState(e.target.value as ArtworkState)}
-              options={STATE_OPTIONS}
-              hint={
-                isEdit
-                  ? "상태 전환 시 Living Timeline에 기록됩니다"
-                  : "신규 작품은 보통 초안(DRAFT)에서 시작합니다"
-              }
-            />
-          </FormSection>
-        )}
+              <CurationTextField
+                label="큐레이션 초안"
+                hint="CurationNote 만들기 전 quick note 또는 보조 메모"
+                value={curationDraft}
+                onChange={setCurationDraft}
+                placeholder="간단한 큐레이션 메모"
+                rows={3}
+              />
+              <CurationTextField
+                label="전시 설명"
+                hint="전시 컨텍스트 / 전시 기획서 텍스트"
+                value={exhibitionText}
+                onChange={setExhibitionText}
+                placeholder="예: 2024 베니스 비엔날레 한국관 출품작"
+                rows={3}
+              />
+              <CurationTextField
+                label="작가 메모 (Artist Note)"
+                hint="작가 본인의 work statement"
+                value={artistNote}
+                onChange={setArtistNote}
+                placeholder="작가가 직접 남긴 작품 노트"
+                rows={3}
+              />
+              <CurationTextField
+                label="Provenance / 소장 이력"
+                hint="출처 / 이전 소유자 / 전시 이력 메모"
+                value={provenanceNote}
+                onChange={setProvenanceNote}
+                placeholder="예: 1990년 작가 직접 매입 → 2010년 OOO 갤러리 → 현재"
+                rows={3}
+              />
+            </FormSection>
+          </section>
+
+          {/* ─── Section: 거래 (가격 / 상태) ─────────────────────────── */}
+          <section id="form-section-pricing" ref={pricingSectionRef}>
+            <FormSection label="거래">
+              <TextField
+                label="가격"
+                required
+                inputMode="numeric"
+                value={priceDisplay}
+                onChange={(e) => handlePriceChange(e.target.value)}
+                error={showError("priceKRW")}
+                placeholder="0"
+                suffix="KRW"
+              />
+              {/* STEP 18 — AXVELA AI Price Suggestion (rule_18 (c)) */}
+              {isEdit && artwork && (
+                <PriceSuggestionPanel
+                  artwork={artwork}
+                  onApplyMid={(midValue) => setPriceRaw(midValue.toString())}
+                />
+              )}
+              <Select
+                label="상태"
+                required
+                value={state}
+                onChange={(e) => setState(e.target.value as ArtworkState)}
+                options={STATE_OPTIONS}
+                hint={
+                  isEdit
+                    ? "상태 전환 시 Living Timeline에 기록됩니다"
+                    : "신규 작품은 보통 초안(DRAFT)에서 시작합니다"
+                }
+              />
+            </FormSection>
+          </section>
+        </div>
       </div>
 
       {/* Footer */}
