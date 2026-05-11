@@ -15,7 +15,7 @@
 Build:          ✅ green (npx next build, tsc --noEmit, next lint, 48/48 scenarios pass — fiscal 10/10 + operational 12/12 + ai-protocol 17/17 + anthropic-provider 9/9)
 Route:          185 kB / 273 kB First Load JS  (STEP 95 +3 kB — DocumentWritingAssistButton × 6 surfaces, 단일 공유 component)
 Last STEP:      STEP 95 (AI Document Writing UI Integration — 6 targets × 1 shared component) ✅
-Latest ZIP:     axvela-step95-ai-document-writing.zip
+Latest ZIP:     axvela-step127-phase2.zip
 Phase 1 Fiscal: STEP 86 ✅ + 87 ✅ + 88 ✅ + 89 ✅ + 90 ✅ + 91 ✅ (6/6 frozen, foundation freeze)
 Phase 3 Intel:  STEP 92 ✅ + STEP 93 ✅ + STEP 94 ✅ + STEP 95 ✅ (4/8 — operational + protocol skeleton + provider activation + document writing UI)
 영구 정책 문서:  6개 — AI Direction / Trust Layer / Fiscal / DEV Convention / **AI Integration** + STEP_INDEX (navigation)
