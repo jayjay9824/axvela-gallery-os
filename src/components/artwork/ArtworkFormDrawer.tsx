@@ -227,11 +227,30 @@ function ArtworkForm({ artwork, onCancel }: ArtworkFormProps) {
   const curationSectionRef = React.useRef<HTMLElement | null>(null);
   const pricingSectionRef = React.useRef<HTMLElement | null>(null);
 
+  // STEP 126 Phase 4 — Scroll spy infrastructure. scrollContainerRef:
+  // IntersectionObserver root (form body 의 overflow-y-auto div).
+  // observerMutedRef: TabBar 클릭 → smooth-scroll 진행 중 중간 section 진입
+  // 으로 인한 activeTab jitter 방지 플래그. muteTimeoutRef: 300ms 후 mute 해제
+  // 타이머 (cleanup 대상).
+  const scrollContainerRef = React.useRef<HTMLDivElement | null>(null);
+  const observerMutedRef = React.useRef(false);
+  const muteTimeoutRef = React.useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+
   // STEP 126 Phase 3 — TabBar 클릭 → 해당 section scrollIntoView (sticky
-  // anchor navigation). activeTab 도 즉시 동기화 — Phase 4 합류 전까지는 클릭만
-  // active 갱신 (스크롤 추적은 Phase 4 에서 IntersectionObserver 가 담당).
+  // anchor navigation). activeTab 도 즉시 동기화.
+  // STEP 126 Phase 4 — 클릭 직후 observerMutedRef = true + 300ms 후 unmute.
+  // scrollIntoView smooth 동안 IntersectionObserver 가 중간 section 으로
+  // activeTab 을 깜빡이게 만드는 jitter 차단. 도착 후 자동 갱신 복원.
   // refs 는 useRef 로 stable — 빈 deps 배열 안전.
   const handleAnchorTabChange = React.useCallback((next: TabKey) => {
+    observerMutedRef.current = true;
+    if (muteTimeoutRef.current) clearTimeout(muteTimeoutRef.current);
+    muteTimeoutRef.current = setTimeout(() => {
+      observerMutedRef.current = false;
+    }, 300);
+
     setActiveTab(next);
     const target =
       next === "image"
@@ -242,6 +261,65 @@ function ArtworkForm({ artwork, onCancel }: ArtworkFormProps) {
             ? curationSectionRef.current
             : pricingSectionRef.current;
     target?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, []);
+
+  // STEP 126 Phase 4 — IntersectionObserver scroll spy. 사용자가 form body
+  // 스크롤 시 viewport 상단 영역에 가장 노출된 section 으로 activeTab 자동
+  // 동기화 → TabBar active 표시가 자연스럽게 따라옴.
+  //
+  // rootMargin "0px 0px -50% 0px": 활성 zone 을 viewport 상단 절반으로 제한
+  // (하단 50% 무시). 사용자가 어떤 section 을 "보고 있는지" 가 명확해짐 — 두
+  // section 이 모두 viewport 안에 있어도 위쪽 50% 안에 있는 section 이 active.
+  //
+  // threshold 다단계 [0, 0.25, 0.5, 0.75, 1]: 부드러운 ratio 변화 추적 →
+  // section 전환 경계에서 정밀.
+  //
+  // observerMutedRef: 클릭 기반 smooth-scroll 중에는 IO 콜백 무시.
+  //
+  // ArtworkForm 인스턴스는 Drawer key (artworkId | "new") 별로 mount/unmount
+  // 되므로 effect 가 매 Drawer open 마다 새로 실행 → 새 observer 생성, 이전
+  // 인스턴스는 cleanup 으로 disconnect. mute timer 도 cleanup 에서 clear.
+  React.useEffect(() => {
+    const root = scrollContainerRef.current;
+    if (!root) return;
+
+    const sectionMap: ReadonlyArray<readonly [TabKey, HTMLElement | null]> = [
+      ["image", imageSectionRef.current],
+      ["artwork", artworkSectionRef.current],
+      ["curation", curationSectionRef.current],
+      ["pricing", pricingSectionRef.current],
+    ];
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (observerMutedRef.current) return;
+        const visible = entries.filter((e) => e.isIntersecting);
+        if (visible.length === 0) return;
+        // 가장 활성 zone 에 많이 노출된 section 선택 (highest intersection
+        // ratio). 동률 시 sectionMap 순서 (DOM 순서) = 위쪽 section 우선.
+        visible.sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+        const topTarget = visible[0].target;
+        const topKey = sectionMap.find(([, el]) => el === topTarget)?.[0];
+        if (topKey) setActiveTab(topKey);
+      },
+      {
+        root,
+        rootMargin: "0px 0px -50% 0px",
+        threshold: [0, 0.25, 0.5, 0.75, 1],
+      },
+    );
+
+    sectionMap.forEach(([, el]) => {
+      if (el) observer.observe(el);
+    });
+
+    return () => {
+      observer.disconnect();
+      if (muteTimeoutRef.current) {
+        clearTimeout(muteTimeoutRef.current);
+        muteTimeoutRef.current = null;
+      }
+    };
   }, []);
 
   const [submitted, setSubmitted] = React.useState(false);
@@ -422,7 +500,11 @@ function ArtworkForm({ artwork, onCancel }: ArtworkFormProps) {
   return (
     <form onSubmit={handleSubmit} className="flex flex-col h-full" noValidate>
       {/* Body */}
-      <div className="flex-1 min-h-0 overflow-y-auto scroll-clean px-6 py-5">
+      {/* STEP 126 Phase 4 — scroll container ref = IntersectionObserver root. */}
+      <div
+        ref={scrollContainerRef}
+        className="flex-1 min-h-0 overflow-y-auto scroll-clean px-6 py-5"
+      >
         {isEdit && artwork && (
           <div className="mb-5 px-3 py-2.5 rounded-md bg-surface-muted border border-line">
             <p className="text-[10.5px] text-ink-subtle uppercase tracking-[0.14em] font-semibold">
