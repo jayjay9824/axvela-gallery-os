@@ -64,7 +64,17 @@
 
 ### 2.2 Contract entity (신설? 기존 확장?)
 
-**결론**: ✅ **Contract entity 이미 정착**. [src/types/contract.ts](src/types/contract.ts) 가 4-stage approval (DRAFT/REVIEW/APPROVED/LOCKED) + Versioning + STEP 86 trust metadata 슬롯 모두 보유. **STEP 127 / 128 에서 신설 0 줄** — 기존 entity 의 *UI surface activation* 만 STEP 128 영역.
+**결론** (사용자 worktree grep 검증 2026-05-12 반영): ✅ **Contract entity 의 데이터 layer 가 *전부* 정착**. [src/types/contract.ts](src/types/contract.ts) 가 4-stage approval (DRAFT/REVIEW/APPROVED/LOCKED) + Versioning + STEP 86 trust metadata 슬롯 모두 보유. [Detail Drawer](src/components/contract/ContractDetailDrawer.tsx) / [Summary](src/components/contract/ContractSummary.tsx) / [documents-aggregates](src/lib/documents-aggregates.ts) `CONTRACT_STATUS_LABEL` / [utils.ts](src/lib/utils.ts) `CONTRACT_STATUS_LABEL` + `CONTRACT_STATUS_COLOR` + `generateContractClauses` 모두 정착. **store actions 5 개 전부 정착 (선언 + 구현)**:
+
+| Action | 선언 라인 | 구현 라인 |
+|--------|----------|-----------|
+| `createContract` | [useArtworkStore.ts:939](src/store/useArtworkStore.ts:939) | [useArtworkStore.ts:4277](src/store/useArtworkStore.ts:4277) |
+| `submitContractForReview` | [useArtworkStore.ts:943](src/store/useArtworkStore.ts:943) | [useArtworkStore.ts:4414](src/store/useArtworkStore.ts:4414) |
+| `approveContract` | [useArtworkStore.ts:945](src/store/useArtworkStore.ts:945) | [useArtworkStore.ts:4473](src/store/useArtworkStore.ts:4473) |
+| `lockContract` | [useArtworkStore.ts:947](src/store/useArtworkStore.ts:947) | [useArtworkStore.ts:4535](src/store/useArtworkStore.ts:4535) |
+| `createContractVersion` | [useArtworkStore.ts:952](src/store/useArtworkStore.ts:952) | [useArtworkStore.ts:4600](src/store/useArtworkStore.ts:4600) |
+
+**STEP 128 의 진짜 신설 작업은 *작성 UI 단 1 개*: [ContractDraftDrawer.tsx](src/components/contract/ContractDraftDrawer.tsx) (현재 미정착, git grep 0 건)** — DRAFT → REVIEW → APPROVED → LOCKED transitions UI 가 기존 5 store actions 만 wire 호출. store / type / aggregates / utils 신설 0 줄.
 
 **근거**:
 - Contract schema 의 JSDoc (line 6~15) 이 이미 AI-Human Loop 4-stage 명시: `createContract → updateContract → submitContractForReview → approveContract → lockContract`.
@@ -321,18 +331,20 @@ interface GalleryTemplate {
 
 ### STEP 128 — Invoice / Contract Preview + Send + Lock + PDF UI
 
-**Scope**:
-- InvoiceDetailDrawer / ContractDetailDrawer 안 Preview Modal 활성
-- AI 초안 생성 (utils.ts `generateContractClauses` 기존 호출) → 인간 수정 → 승인 → LOCK 4-stage UI
+**Scope** (사용자 검증 2026-05-12 반영 — Contract store 신설 0 줄 / fiscal helper 직접 수정 가능):
+- InvoiceDetailDrawer 안 Preview Modal 활성 (Detail 재사용)
+- **ContractDraftDrawer 신설** — 작성 UI 단 1 개 신설 (DRAFT/REVIEW/APPROVED/LOCKED 4-stage transitions, 기존 store actions wire 호출)
+- ContractDetailDrawer 안 Preview Modal 활성 (Detail 재사용)
+- AI 초안 생성 (`utils.ts` `generateContractClauses` 기존 호출) → 인간 수정 → 승인 → LOCK 4-stage UI
 - PRE invoice 의 send button label 분기 + watermark "PRO FORMA — NOT FOR PAYMENT"
 - PaymentRegisterDrawer disabled UI for PRE invoice
 - `InvoicePrintView.tsx` / `ContractPrintView.tsx` 신설 (STEP 87/89 PrintView 답습)
-- `documents_invoices` resolver / fiscal aggregate / reporting 에 PRE filter 합류
+- `documents_invoices` resolver / **fiscal-summary.ts / reporting-aggregates.ts 에 PRE filter 직접 추가** (frozen 외부 확인됨 — derived layer 우회 helper 불필요)
 - `formatAxidForDocument` helper (디자인 자산 표기 변환)
 
-**규모**: ~700~900 LOC (Drawer 확장 ~200 + 2 PrintView ~250 each + AI assist UI ~100 + payment guard UI ~50 + filter 합류 ~50 + helper ~30)
-**Risk**: 🟡 Medium (UI 확장 + flow 활성, drawer / modal layer 충돌 가능성)
-**bundle delta 예상**: +5~8 kB (2 PrintView 정착)
+**규모**: ~550~800 LOC (ContractDraftDrawer ~250 + Invoice/Contract Detail Drawer 확장 ~150 + 2 PrintView ~250 each + AI assist UI ~50 + payment guard UI ~50 + PRE filter 직접 추가 ~30 + helper ~30) — Contract store / type 신설 0 + filterFinalInvoices indirection 우회 helper 0
+**Risk**: 🟢 Medium-Low (Contract 데이터 layer 정착 + fiscal 직접 수정 path 단순화 — 호출 누락 risk 제거)
+**bundle delta 예상**: +5~8 kB (2 PrintView + DraftDrawer 정착)
 **보존 약속**: §2.3 / §2.5 의 영향도 표 그대로
 
 ### STEP 129 — Gallery Template 2-tier + 한/영
@@ -407,17 +419,18 @@ interface GalleryTemplate {
 | 파일 | 변경 종류 |
 |------|----------|
 | [src/components/invoice/InvoiceDetailDrawer.tsx](src/components/invoice/InvoiceDetailDrawer.tsx) | Preview Modal + PRE label 분기 + watermark |
-| [src/components/contract/ContractDetailDrawer.tsx](src/components/contract/ContractDetailDrawer.tsx) | Preview Modal + 4-stage UI |
+| `src/components/contract/ContractDraftDrawer.tsx` (신규) | **작성 UI 신설** — DRAFT/REVIEW/APPROVED/LOCKED transitions, 기존 5 store actions wire 호출 |
+| [src/components/contract/ContractDetailDrawer.tsx](src/components/contract/ContractDetailDrawer.tsx) | Preview Modal 활성 (기존 Detail 재사용, 4-stage UI 는 DraftDrawer 측 책임) |
 | `src/components/invoice/InvoicePrintView.tsx` (신규) | A4 PrintView (STEP 87/89 패턴) |
 | `src/components/contract/ContractPrintView.tsx` (신규) | 매매 계약서 PrintView |
 | [src/components/payment/PaymentRegisterDrawer.tsx](src/components/payment/PaymentRegisterDrawer.tsx) | PRE invoice disabled UI |
 | [src/lib/drilldown-resolver.ts](src/lib/drilldown-resolver.ts) | `documents_invoices` resolver 의 PRE filter |
-| [src/lib/fiscal-summary.ts](src/lib/fiscal-summary.ts) | byCurrency 집계의 PRE 제외 (frozen 검토 필요 — §6 참조) |
-| [src/lib/reporting-aggregates.ts](src/lib/reporting-aggregates.ts) | reporting 의 PRE filter |
+| [src/lib/fiscal-summary.ts](src/lib/fiscal-summary.ts) | **PRE filter 직접 추가** (frozen 외부 확인 완료 — §6 참조) — `invoices.filter(inv => getInvoiceKind(inv) === "final")` |
+| [src/lib/reporting-aggregates.ts](src/lib/reporting-aggregates.ts) | **PRE filter 직접 추가** (frozen 외부) |
 | [src/lib/utils.ts](src/lib/utils.ts) | `formatAxidForDocument` helper |
 | [src/components/layout/ArtworkGrid.tsx](src/components/layout/ArtworkGrid.tsx) | search 의 dual format substring match |
 
-⚠️ **fiscal-summary.ts / reporting-aggregates.ts 가 Phase 1 Fiscal frozen 검토 대상**. STEP 128 진입 시 *frozen 영역 식별 + 필요 시 derived layer 분리* 우선 수행. §6 보존 약속 검증표 참조.
+✅ **fiscal-summary.ts / reporting-aggregates.ts frozen 외부 확인 완료** — 사용자 worktree grep 검증 (2026-05-12) 결과 정책 문서 등록 0 건. 두 파일은 *일반 derived aggregation layer* — STEP 128 진입 시 직접 PRE filter 추가, derived layer 우회 helper 불필요. 호출 누락 risk 제거. §11 검증 로그 참조.
 
 ### STEP 129 예상 변경 (~10 files)
 
@@ -438,7 +451,7 @@ interface GalleryTemplate {
 
 | # | 보존 약속 | STEP 127 | STEP 128 | STEP 129 | STEP 130 |
 |---|----------|----------|----------|----------|----------|
-| 1 | 🔴 **Phase 1 Fiscal frozen 6 files / 0-line change rule** | ☑ 영향 없음 — `invoice.ts` 는 Phase 1 frozen 외부, fiscal helpers 0 줄 | ⚠️ **frozen 영역 식별 필요** — fiscal-summary.ts / reporting-aggregates.ts 가 STEP 88 정착물. *derived filter layer* 분리 필요 (frozen 직접 수정 금지) | ☑ 영향 없음 — 신규 entity, fiscal 0 줄 | ☑ 영향 없음 (별도 STEP) |
+| 1 | 🔴 **Phase 1 Fiscal frozen 6 files / 0-line change rule** | ☑ 영향 없음 — `invoice.ts` 는 Phase 1 frozen 외부, fiscal helpers 0 줄 | ☑ **frozen 외부** — 정책 문서 등록 0 건 확인 완료 (사용자 검증 2026-05-12, §11 검증 로그). STEP 128 진입 시 fiscal-summary.ts / reporting-aggregates.ts 에 PRE filter 직접 추가 (derived layer 본연의 역할) | ☑ 영향 없음 — 신규 entity, fiscal 0 줄 | ☑ 영향 없음 (별도 STEP) |
 | 2 | 🔴 **rule_5 AI-Human Loop keyword immutability** | ☑ 키워드 0 변경 | ☑ "AI 초안" / "담당자 검토" / "rule_5" / "AI-Human Loop" 모두 보존, 추가만 | ☑ 키워드 0 변경 | n/a |
 | 3 | 🔴 **Persistence schema v1 boundary** | ☑ SCHEMA_VERSION 변경 0, validateV1 0 줄, invoiceKind 옵셔널 | ☑ schema 변경 0 | ☑ optional slice (STEP 117 패턴, validateV1 0 줄) | ☑ 영향 없음 |
 | 4 | 🔴 **rule_14 3-column layout (Sidebar 240px / Grid flex-1 / Detail 380px)** | ☑ UI 0 변경 | ☑ Drawer / Modal layer 안 (rule_17), 3-column 0 줄 | ☑ Settings drawer (rule_17) | 🔴 **STEP 130 가 본 rule 검토 대상** — STEP 127~129 와 분리 보장 |
@@ -448,7 +461,7 @@ interface GalleryTemplate {
 | 8 | 🔴 **Image-First hierarchy in ArtworkFormDrawer** | ☑ 영향 없음 | ☑ 영향 없음 | ☑ 영향 없음 | n/a |
 | 9 | 🔴 **Two-Layer Curation Model 분리 원칙** | ☑ 답습 (Contract vs Invoice 별도 layer) | ☑ 답습 | ☑ 답습 (template brand layer vs record layer) | n/a |
 
-⚠️ **검증표의 단 1 개 경고 (#1 STEP 128)**: fiscal-summary.ts / reporting-aggregates.ts 의 invoice 집계가 PRE 를 포함하면 안 됨 → STEP 128 진입 시 *derived filter layer* 추가 (frozen 파일 직접 수정 금지). 구체 방식: helper `filterFinalInvoices(invoices) = invoices.filter(inv => getInvoiceKind(inv) === "final")` 를 *호출 측에서 사용* — frozen 함수 body 0 줄 변경, 호출자가 filtered list 전달.
+✅ **검증표 경고 0 개** — 사용자 직접 worktree grep 검증 (2026-05-12) 결과 `fiscal-summary.ts` / `reporting-aggregates.ts` 의 정책 문서 frozen 등록 0 건 확인. 두 파일은 *일반 derived aggregation layer* 로 분류 — STEP 128 진입 시 두 파일에 PRE filter (`invoices.filter(inv => getInvoiceKind(inv) === "final")`) **직접 추가**, derived layer 우회 helper (`filterFinalInvoices`) **불필요**. 직접 수정 방식이 더 단순하고 호출 누락 risk 제거. 검증 근거 §11 참조.
 
 ---
 
@@ -460,7 +473,7 @@ Phase 2 (실제 구현) 진입 전 다음 모두 충족 확인:
 - [ ] STEP 127 / 128 / 129 분리 방안 사용자 승인
 - [ ] STEP 130 별도 분리 합의 (5-tab navigation 본 bundle 미포함)
 - [ ] AXID 형식 결정 — 옵션 Z (디자인 표기 분리, 마이그레이션 0) 사용자 승인
-- [ ] STEP 128 진입 시 fiscal-summary.ts / reporting-aggregates.ts 의 PRE filter 를 *derived layer 호출 측* 에서 수행 (frozen 0 줄) 합의
+- [ ] fiscal-summary.ts / reporting-aggregates.ts 는 frozen 외부 확인 완료 (§11 검증 로그). STEP 128 진입 시 두 파일에 PRE filter **직접 추가** 합의 (derived layer 우회 helper 불필요)
 - [ ] PDF 출력 = browser native `window.print()` 채택 (신규 dependency 0) 합의
 - [ ] PRE invoice settlement non-trigger 의 4-layer 방어 (type / store / UI / label) 합의
 - [ ] 한·영 dual layout 은 STEP 129 안 흡수 (별도 다국어 STEP 분리 비권장) 합의
@@ -505,3 +518,52 @@ Phase 1 Fiscal frozen 6 files 변경: 0
 | 본 review 자체 폐기 | `git reset --hard 7e30d19` (branch 폐기) 또는 `git revert <commit>` |
 | AXID 옵션 Z → 옵션 X (즉시 전환) 변경 | 본 doc §2.7 갱신, 별도 STEP 131 추가 신설, STEP 127~129 의존성 재평가 |
 | 신규 PDF lib 도입 결정 | 본 doc §2.5 갱신, STEP 128 와 별도 dependency-introduction STEP 분리 (예: STEP 128.5) |
+
+---
+
+## 11. 사실관계 검증 로그 (2026-05-12)
+
+본 review doc 의 사실 정합성 확보를 위해 사용자 + Claude (Anthropic) 가 worktree 직접 검증 수행. 본 §11 의 결과가 §2.2 / §2.4 / §3 (권장 STEP 분리안) / §6 / §7 결론의 근거.
+
+### 11.1 Contract entity 정착 검증
+
+**정착 확인**:
+- [src/types/contract.ts](src/types/contract.ts) — `ContractStatus = "DRAFT" | "REVIEW" | "APPROVED" | "LOCKED"` 4-stage (rule_4 정합)
+- [src/components/contract/ContractDetailDrawer.tsx](src/components/contract/ContractDetailDrawer.tsx) — 506 LOC
+- [src/components/contract/ContractSummary.tsx](src/components/contract/ContractSummary.tsx)
+- [src/lib/documents-aggregates.ts](src/lib/documents-aggregates.ts) — `CONTRACT_STATUS_LABEL` / `CONTRACT_COMPLETED`
+- [src/lib/utils.ts](src/lib/utils.ts) — `CONTRACT_STATUS_LABEL` / `CONTRACT_STATUS_COLOR` / `generateContractClauses` (Korean 매매 계약 본문 generator)
+- store actions 5 개 전부 선언 + 구현: `createContract` (939/4277) / `submitContractForReview` (943/4414) / `approveContract` (945/4473) / `lockContract` (947/4535) / `createContractVersion` (952/4600) — 모두 [src/store/useArtworkStore.ts](src/store/useArtworkStore.ts)
+
+**미정착 확인**:
+- `src/components/contract/ContractDraftDrawer.tsx` — `git grep "ContractDraftDrawer"` 0 건
+
+**결론**: STEP 128 의 *유일한* Contract 신설 = ContractDraftDrawer 1 개. store / type / aggregates / utils 신설 0 줄.
+
+### 11.2 fiscal-summary / reporting-aggregates frozen 분류 검증
+
+**검증 명령 + 결과**:
+- `Glob **/14_PERMANENT_POLICIES.md` → 0 건 (worktree 부재)
+- `git log --all` 에 `14_PERMANENT_POLICIES.md` 흔적 → 0 건 (force push 이력 손실 가능성도 배제 — 본 worktree 내 한정 검증)
+- [AXVELA_FISCAL_ARCHITECTURE.md](AXVELA_FISCAL_ARCHITECTURE.md) 안 "frozen / 영구 / Phase 1 Fiscal" 키워드 → 0 건
+- 어떤 영구 정책 문서 (AXVELA_AI_DIRECTION / AXVELA_AI_INTEGRATION / AXVELA_DEV_CONVENTION / AXVELA_FISCAL_ARCHITECTURE / AXVELA_TRUST_LAYER / AXVELA_WORKFLOW_ARCHITECTURE) 에도 `fiscal-summary.ts` / `reporting-aggregates.ts` 등록 → 0 건
+- 두 파일의 실제 git log 최초 commit: `2e4db34` (STEP 124-125 P1 bugfix) — STEP 88 시기 아님
+
+**결론**: 두 파일은 *frozen 외부* — *일반 derived aggregation layer* 로 분류. STEP 128 진입 시 PRE filter 직접 추가 허용 (derived layer 본연의 역할). 우회 helper (`filterFinalInvoices`) 불필요.
+
+### 11.3 14_PERMANENT_POLICIES.md 정책 1 등록 시도 차단
+
+본 review 의 *이전 정정 지시문* (Phase 1 갱신 1 차) 에서 "14_PERMANENT_POLICIES.md 의 정책 1 grep 목록 확장" 작업이 포함되어 있었으나, worktree 검증 결과 *해당 파일 존재한 적 없음* — 임의 신설 시 6 영구 정책 문서 (AXVELA_*.md) 와의 관계 misrepresentation 위험. Claude (Anthropic) 가 사실관계 확인 요청 후 사용자 보수적 결정 (선택지 1 → 사실관계 보정 후 직접 수정 path 채택) 으로 전환.
+
+**결론**: 신규 `14_PERMANENT_POLICIES.md` 신설 시도 차단됨 — 기존 6 영구 정책 문서 본문 변경 0 줄 + frozen 등록 시도 0 줄 + 정책 1 의미 임의 매핑 0 건. *별도 architecture decision* 으로 분리 (필요 시 향후 STEP 에서 통합 검토).
+
+### 11.4 본 §11 검증 결과의 영향 범위
+
+| 본 doc 섹션 | §11 검증 영향 |
+|------------|--------------|
+| §2.2 Contract entity 결론 | ✅ 데이터 layer 전부 정착 + DraftDrawer 1 개만 신설 — §11.1 근거 |
+| §2.4 Settlement 영향 | ✅ fiscal helpers frozen 외부 — 직접 PRE filter 추가 가능 — §11.2 근거 |
+| §3 권장 STEP 분리안 (STEP 128) | ✅ LOC ~550~800 / Risk 🟢 Medium-Low — §11.1 + §11.2 근거 |
+| §5 영향 받는 파일 목록 | ✅ fiscal-summary / reporting-aggregates 의 "frozen 검토 필요" 경고 → "frozen 외부 확인 완료" — §11.2 근거 |
+| §6 보존 약속 검증표 #1 행 | ✅ STEP 128 cell ⚠️ → ☑ — §11.2 근거 |
+| §7 체크리스트 #4 | ✅ derived layer 호출 측 helper → 직접 추가 — §11.2 근거 |
