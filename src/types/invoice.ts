@@ -123,5 +123,36 @@ export interface Invoice {
    * STEP 91 (Accountant Export)에서 본 슬롯 명시 채움 — record origin 추적.
    */
   sourceContext?: "manual" | "auto" | "imported";
+
+  // ── STEP 127 Phase 2 — Invoice Kind Foundation (Optional Slice 8회째) ──
+  /**
+   * Invoice 의 *문서 분류 dimension*. status (DRAFT/SENT/PAID) 와 직교 —
+   * 두 dimension 은 의미 / lifecycle 모두 별개.
+   *
+   * - `"pre"`  pro-forma / 예비 인보이스 — buyer 안내용 *informational charge
+   *           document*. **결제 대상 아님** → registerPayment 불가, settlement
+   *           trigger 발생 금지 (rule_3 Money Flow Separation).
+   * - `"final"` 결제용 정식 인보이스 — registerPayment 대상, settlement
+   *           trigger 발생, fiscal 집계 포함. **기존 모든 invoice 의 의미** (거래
+   *           invoice 가 default).
+   *
+   * **persistence v1 호환**: 옵셔널 슬롯 — 기존 데이터 (Phase 1 ~ STEP 126
+   * 까지) 모두 undefined 상태 그대로 보존. validateV1 (`r.invoices` 가
+   * array 인지만 검증) 무변경, SCHEMA_VERSION "v1" 변경 0. Optional Slice
+   * 패턴 8 회째 답습 (STEP 87/89 + 113~119/116/118 + 117 + 본 STEP 127).
+   *
+   * **fallback 정책**: 미정의 시 `getInvoiceKind` helper 가 `"final"` 반환
+   * — 기존 모든 invoice 의 의미 그대로 보존 (거래 invoice = default).
+   * Helper 단일 derivation point — UI / store guard / fiscal filter 모두
+   * 본 helper 만 호출 (STEP 128 활성 시점).
+   *
+   * **STEP 127 Phase 2 scope 한정**: type slot + helper 정착만. UI 진입 /
+   * registerPayment guard / fiscal filter / send button label 분기 / PRO
+   * FORMA watermark 모두 STEP 128 (out of scope).
+   *
+   * **Approval Workflow 무관**: 본 필드는 *문서 분류* dimension. STEP 101+
+   * 활성 시 ApprovalAction chain 과 별도.
+   */
+  invoiceKind?: "pre" | "final";
 }
 
