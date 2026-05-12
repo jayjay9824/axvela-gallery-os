@@ -414,24 +414,45 @@ export function getArtistName(artist: Artist, locale: Locale = "ko"): string {
 | **Playwright** (server) | server-side, 추가 browser | ✅ 완벽 (Chromium / Firefox / WebKit) | 0 | ✅ Node runtime | ✅ | ✅ **재현 가능** | A |
 | `pdf-lib` (manual layout) | +200 kB client | △ layout 수동 (시간 비용 큼) | +200 kB | ✅ | font register 별도 | ❌ texture 불가능 | ❌ |
 
-### §5.3 권장 — server-side PDF 채택 (방향성 결정)
+### §5.3 권장 — server-side PDF 채택 범위 *신규 영역만* (사용자 결정 2026-05-12 반영)
 
-**본 STEP 128 의 결정**: **server-side PDF (Puppeteer / Playwright) 방향성 채택**.
+**본 STEP 128 의 결정** (사용자 정정): **server-side PDF 채택 범위 = *신규 영역만***.
 
-- **라이브러리 채택 (Puppeteer vs Playwright)**: 본 STEP 128 결정 보류 — STEP 132 (Server-side PDF Architecture) 진입 시점에 다음 항목 별도 검토:
-  - Vercel Functions / Edge Runtime / Node Runtime 호환 시 size limit / cold-start
-  - 한글 폰트 embedding 전략 (Noto Sans KR / Noto Serif KR / system fallback)
-  - leather texture / gold foil 재현 CSS 정합성 검증
-  - PDF rendering API 측 latency 정량
+| 범위 | 결정 |
+|------|------|
+| **신규 영역** — Invoice / Contract / Certificate / Passport export | **server-side PDF 채택** |
+| **기존 영역** — ReceiptPrintView (STEP 87) + TaxInvoicePrintView (STEP 89) 의 `window.print()` **4 곳** 정착물 | **그대로 보존** — 회귀 risk 차단 |
+| **전면 전환 여부** (기존 영역도 server-side 로?) | **STEP 132 별도 결정** — 본 STEP 128 보류 |
 
-- **STEP 132 진입 전**: 사용자 측 hosting 환경 (Vercel / 자체 host / Cloudflare) 확인 + Chromium runtime 부담 수용 가능성 확인.
+**근거** (사용자 spec):
+- Phase 1.0 §1.5 검증에서 STEP 87/89 `window.print()` 4 호출처 활성 사용 확인.
+- 기존 정착물 보존 = 회귀 risk 차단.
+- 신규 영역만 server-side = STEP 132 scope 합리적 유지.
+
+**라이브러리 후보 — 3 후보 동등** (사용자 정정):
+
+| 후보 | 본 STEP 128 의 입장 |
+|------|---------------------|
+| Puppeteer (server-side, Chromium) | 본 STEP 선호 표명 **0** — STEP 132 시점 검토 |
+| Playwright (server-side, multi-browser) | 본 STEP 선호 표명 **0** — STEP 132 시점 검토 |
+| **`react-pdf`** (client / server hybrid) | **사용자 추가 — 동등 후보**. 본 STEP 선호 표명 **0** — STEP 132 시점 검토 |
+
+→ 라이브러리 결정은 **STEP 132 (Server-side PDF Architecture)** 진입 시 3 후보를 *Vercel 빌드 환경 실험 + 디자인 시안 재현 정확도 정량 비교 후* 결정. **본 STEP 128 에서 사용자 선호 표명 없음**.
+
+**STEP 132 진입 시 검토 항목** (3 후보 공통):
+- Vercel Functions / Edge Runtime / Node Runtime 호환 (size limit / cold-start)
+- 한글 폰트 embedding 전략 (Noto Sans KR / Noto Serif KR / system fallback)
+- leather texture / gold foil 재현 CSS 정합성 검증
+- PDF rendering latency 정량
+- 사용자 측 hosting 환경 (Vercel / 자체 host / Cloudflare) 호환
 
 ### §5.4 §5 결론 + 보존 약속 영향도
 
-**결론**:
-1. STEP 127 Phase 2 의 `window.print` 결정은 *Receipt/TaxInvoice 범위 한정* 으로 유효 — Passport 영역으로 확장 불가.
-2. Passport export 는 **server-side PDF** 가 유일 옵션.
-3. **STEP 132 (Server-side PDF Architecture)** 신설 — 라이브러리 결정 + 구현 분리.
+**결론** (사용자 결정 2026-05-12 반영):
+1. STEP 127 Phase 2 의 `window.print` 결정은 *Receipt/TaxInvoice 범위 한정* 으로 유효 — **기존 4 곳 정착물 보존** (회귀 risk 차단).
+2. **신규 영역만** (Invoice / Contract / Certificate / Passport export) **server-side PDF 채택**.
+3. 전면 전환 여부 (Receipt / TaxInvoice 도 server-side 로?) 는 **STEP 132 별도 결정**.
+4. 라이브러리 후보 = Puppeteer / Playwright / **react-pdf** **3 후보 동등** — STEP 132 진입 시 정량 비교 후 결정. 본 STEP 128 선호 표명 0.
 
 **보존 약속 영향도**:
 
@@ -532,18 +553,28 @@ STEP 129~135 = **7 STEP**, 각 STEP Phase 1/2 분리 → 총 14 turn 의 작업.
 
 ## §9 사용자 결정 필요 항목 체크리스트
 
-본 review 의 결정 옵션 — 사용자 명시 승인 후 STEP 129~135 진입:
+✅ **2026-05-12 사용자 명시 결정 완료** — 10 항목 모두 확정. 8 항목 권장안 그대로 승인 + 2 항목 정정 + 1 항목 인지. 각 항목 결정 근거:
 
-- [ ] §2 AXID 4-component 분해 — **옵션 (A) AXID interface 확장** 승인 (`displayLabel?` / `routingToken?` 옵셔널 슬롯, `code` 의 internal id 의미 lock)
-- [ ] §2.5 AXID 마이그레이션 — **옵션 (Z)** 승인 (디자인 표기 분리, 0 마이그레이션)
-- [ ] §3 Multilingual — **옵션 (B) Optional Slice + (C) Helper hybrid** 승인 (`titleI18n?` + `getTitle / getArtistName` helper)
-- [ ] §4 PASSPORT architecture — **옵션 (A) Dual-layer 분리** 승인 (rule amendment 0줄, Passport UI vs 기존 Drawer 공존)
-- [ ] §4.4 Passport mode 진입 시 drawer auto-close — single-drawer policy 답습·확장 승인
-- [ ] §5 PDF architecture — **server-side PDF 방향성** 승인 (라이브러리 결정 = STEP 132 보류)
-- [ ] §5.2 라이브러리 후보 — Puppeteer / Playwright 중 *방향성* 의 사용자 선호 (STEP 132 에서 최종)
-- [ ] §6 rule_14 / rule_17 / rule_1 / rule_5 본문 amendment 0줄 + clarifying note (§4.8) 정책 문서 별도 STEP 진입 승인
-- [ ] §7 STEP 129~135 revised roadmap 7 STEP 승인 (각 Phase 1/2 분리)
-- [ ] §7.3 14 turn 추정 — 작업 분량 / 일정 합의
+- [x] **항목 1**: §2 AXID 4-component 분해 — **옵션 (A) AXID interface 확장** 승인 (`displayLabel?` / `routingToken?` 옵셔널 슬롯, `code` 의 internal id 의미 lock). **근거**: Optional Slice 9회째 답습 + rule_1 Physical Root Key (`code` = internal id) 강화 + 외부 reference 영향 0.
+- [x] **항목 2**: §2.5 AXID 마이그레이션 — **옵션 (Z)** 승인 (디자인 표기 분리, 마이그레이션 0). **근거**: 기존 `axid.code` 변경 0줄, 28+ 사용처 무손상, persistence v1 무영향.
+- [x] **항목 3**: §3 Multilingual — **옵션 (B) Optional Slice + (C) Helper hybrid** 승인 (`titleI18n?` + `getTitle / getArtistName` helper). **근거**: `artist.nameEn?` 이 이미 부분 multilingual 정착 — 본 패턴을 full multilingual 로 자연 확장. SCHEMA_VERSION "v1" 100% 유지.
+- [x] **항목 4**: §4 PASSPORT architecture — **옵션 (A) Dual-layer 분리** 승인 (rule amendment 0줄, Passport UI vs 기존 Drawer 공존). **근거**: PASSPORT-1_SPEC.md §12 "기존 Drawer 시스템 제거 금지" 명시 정합 + rule_14/17 본문 amendment 0줄.
+- [x] **항목 5**: §4.4 Passport mode 진입 시 drawer auto-close — single-drawer policy 답습·확장 승인. **근거**: STEP 124/125 정착 정책의 자연 확장, z-index 충돌 방어, dimension 분리 정합.
+- [x] **항목 6 (사용자 정정)**: §5 PDF architecture — **server-side PDF 방향성 승인 — 단, 채택 범위 *신규 영역만* 으로 한정**. *신규 영역 (Invoice / Contract / Certificate / Passport export) 만 server-side PDF*. 기존 `ReceiptPrintView` (STEP 87) / `TaxInvoicePrintView` (STEP 89) 의 `window.print()` **4 곳** 정착물은 **보존**. **전면 전환 여부는 STEP 132 별도 결정**. **근거** (사용자 spec): Phase 1.0 §1.5 검증에서 STEP 87/89 window.print() 4 곳 활성 사용 확인 → 회귀 risk 차단 + STEP 132 scope 합리적 유지.
+- [x] **항목 7 (사용자 정정)**: §5.2 라이브러리 후보 — **Puppeteer / Playwright / `react-pdf` 3 후보 동등**. 본 STEP 128 에서 선호 표명 **없음**. **STEP 132 진입 시 3 후보를 Vercel 빌드 환경 실험 + 디자인 시안 재현 정확도 정량 비교 후 결정**. **근거** (사용자 spec): react-pdf 가 client/server hybrid 옵션으로 Vercel 정합성·한글 폰트 측면에서 동등 검토 가치. 본 STEP 에서 임의 선호 표명 회피.
+- [x] **항목 8**: §6 rule_14 / rule_17 / rule_1 / rule_5 본문 amendment 0줄 + clarifying note (§4.8 / §6.2) 만 doc 안 — 정책 문서 갱신은 사용자 명시 승인 후 별도 doc-only STEP 진입. **근거**: 본문 변경 risk 회피 + 정책 문서 변경의 명시적 결정 과정 보존.
+- [x] **항목 9**: §7 STEP 129~135 revised roadmap **7 STEP 승인** (각 Phase 1/2 분리). **근거**: STEP 127 패턴 답습 (사실관계 사전 검증 → 분석 doc → 사용자 결정 → implementation), 각 STEP 의 revert 단위 보존.
+- [x] **항목 10 (인지)**: §7.3 **14 turn 추정 인지**. 실제 진행 시 사실관계 검증 단계 발견 사항으로 인한 추가 turn 가능 (현실적 **30~40 turn**). **일정 못 박지 않음** — 사용자 인지 항목 (사용자 spec).
+
+### §9.1 본 결정 결과의 production 영향
+
+| 영역 | Phase 1 결정 → production 영향 |
+|------|------------------------------|
+| AXID 옵셔널 슬롯 도입 (§2) | STEP 133 (Expanded Passport) 시점에 production 진입 |
+| Multilingual hybrid (§3) | STEP 130 (i18n Layer) 시점에 production 진입 |
+| PASSPORT Dual-layer (§4) | STEP 131~135 의 UI 영역 |
+| server-side PDF 신규 영역만 (§5 정정) | STEP 132 시점에 라이브러리 결정 + production 진입. 기존 4 곳 window.print() 무손상 보존 |
+| Manifesto clarifying note (§6) | 별도 doc-only STEP 진입 시점 |
 
 ---
 
