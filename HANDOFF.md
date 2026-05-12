@@ -1,7 +1,7 @@
 # AXVELA Gallery OS — Session Handoff
 
-> **작성**: 2026-05-12 (STEP 128 Phase 1 완료 시점 갱신 — AXVELA PASSPORT Architecture Review doc-only 정착, **Phase 4 Stage 3 Architecture 진행 중**)
-> **이전 갱신**: 2026-05-08 (STEP 118 완료 시점 — Phase 4 Stage 2 진행 중 2/3)
+> **작성**: 2026-05-12 (STEP 129 완료 시점 갱신 — Invoice/Contract Write Flow + 4-layer Defense in Depth 정착, **Phase 4 Stage 3 Implementation 진행 중**)
+> **이전 갱신**: 2026-05-12 (STEP 128 Phase 1 — AXVELA PASSPORT Architecture Review doc-only) / 2026-05-08 (STEP 118 — Phase 4 Stage 2 2/3)
 > **목적**: 새 채팅 세션 / VS Code 작업 환경에 컨텍스트 전달
 > **다음 채팅에서**: 본 파일을 읽기 전에 `STEP_INDEX.md`를 우선 참조 — STEP 분류 / 상태 / 중복 방지 / Do Not Duplicate guard 모두 거기에. Multi-STEP 세션 진입 시 **`AXVELA_DEV_CONVENTION.md`의 §2 Partial-State Rules의 7-step checklist를 *항상* 실행**. **Phase 4 진행 중 진입 시 `AXVELA_WORKFLOW_ARCHITECTURE.md` §4 Implementation Constraints 가 1차 reference**.
 
@@ -10,19 +10,22 @@
 ## 🎯 현재 상태
 
 ```
-Build:          ✅ green (npx next build, tsc --noEmit, next lint, 83/83 scenarios PASS)
-Route:          191 kB / 278 kB First Load JS  (STEP 124~128 누적 Δ 0 byte from STEP 118 baseline)
-Last STEP:      STEP 128 Phase 1 (AXVELA PASSPORT Architecture Review, doc-only) ✅
-Latest ZIP:     axvela-step128-passport-architecture-review.zip
+Build:          ✅ green (npx next build, tsc --noEmit, next lint, 93/93 scenarios PASS)
+Route:          195 kB / 282 kB First Load JS  (STEP 129 +4 kB from STEP 128 — 2 PrintView + 5 helpers + 4-layer guard 자연 비용, ±10 kB tolerance 내)
+Last STEP:      STEP 129 (Invoice/Contract Write Flow + 4-layer Defense in Depth) ✅
+Latest ZIP:     axvela-step129-invoice-contract-flow.zip
 Phase 1 Fiscal: ✅ 6/6 frozen (foundation freeze)
 Phase 3 Intel:  ✅ 5/8 (STEP 92~96)
 Phase 4 WF:     🟡 8/N (STEP 113~119 + 124~128 — Stage 1 ✅ / Stage 2 ✅ / Stage 3 진행 중)
 영구 정책 문서: 7개 (AXVELA_AI_DIRECTION / AXVELA_AI_INTEGRATION / AXVELA_DEV_CONVENTION / AXVELA_FISCAL_ARCHITECTURE / AXVELA_TRUST_LAYER / AXVELA_WORKFLOW_ARCHITECTURE + STEP_INDEX navigation)
 UX track:       ✅ 3/3 완성
 
-# 다음 STEP 진입 — STEP 128 Phase 1 review 의 §9 사용자 결정 10 항목 승인 후 STEP 129 entry briefing
-# STEP 129~135 revised roadmap 정착 (STEP 128 §7) — 7 STEP × Phase 1/2 분리 = 14 turn
-# 다음 STEP 진입 전 docs/steps/STEP_128_PHASE_1_ARCHITECTURE_REVIEW.md 의 §9 체크리스트 우선 확인 의무
+# STEP 129 완전 종결 — 사용자 spec #5 (인보이스/계약서 작성 flow) 100% 충족
+# 4-Layer Defense in Depth 완성 (a)(b)(c)(d) — rule_3 Money Flow Separation 보장
+# 다음 STEP 진입 — STEP 130 entry briefing (Internationalization Layer, Optional Slice 10회째 titleI18n? + getter helper)
+# STEP 130+ Phase 1.0 표준 추가: §7 "이전 STEP deferred items 재검토" + §8 "신설 가정 컴포넌트가 worktree 의 기존과 기능 중복 검증" + §9 "검증 게이트 패턴은 path-specific 사용 (broad pattern false positive 회피)" — STEP 129 self-reflection 채택
+# .gitattributes 정책 정착 — *.zip export-ignore (recursive bloat 영구 차단). 이전 STEP 127/128 ZIP 의 git rm --cached 정리는 별도 cleanup STEP
+# STEP 127~129 commit chain (75e300b 부터 8 commits) main push 대기
 # PASSPORT 디자인 자산 (docs/design/passport/PASSPORT-1.png + PASSPORT-1_SPEC.md) untracked 보존 — STEP 131 진입 시 git add
 ```
 

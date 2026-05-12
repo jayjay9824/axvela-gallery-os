@@ -1,0 +1,26 @@
+# ============================================================================
+# .gitattributes — STEP 129 정책 결정 (2026-05-12)
+#
+# **본 파일의 정체**:
+#   git 의 path-based 속성 정책. STEP 129 Commit 4 에서 도입 — recursive
+#   ZIP bloat 영구 차단.
+#
+# **결정 근거** (STEP 127 §11.3 + STEP 128 부수 사실 + STEP 129 Commit 4
+#   path-specific 검증 발견):
+#   - STEP 127 부터 각 STEP 의 ZIP package 가 git tracked binary 로 commit
+#   - 다음 STEP 의 `git archive HEAD` 가 이전 tracked ZIP 을 binary entry 로
+#     포함 → ZIP-in-ZIP recursive bloat 누적
+#   - STEP 129 시점에 11.8 MB (이전 누적 8.85 MB 포함) — STEP 130+ 무한 grow
+#   - export-ignore attribute = git archive 출력에서 자동 배제 (commit history
+#     에는 보존)
+#
+# **out of scope (별도 STEP 분리)**:
+#   - 이전 STEP 127/128 ZIP 의 git rm --cached 정리 — history 영향 + 별도 작업
+#   - GitHub Releases / git-LFS 등 외부 distribution 채널 전환 — 별도 architecture
+#     decision
+# ============================================================================
+
+# ZIP packages — recursive bloat 차단. git archive 출력에서 자동 배제 + binary
+# diff 처리 (text diff 시도 방지).
+*.zip export-ignore
+*.zip binary
