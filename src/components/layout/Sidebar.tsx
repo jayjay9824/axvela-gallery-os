@@ -3,6 +3,9 @@
 import * as React from "react";
 import { useArtworkStore } from "@/store/useArtworkStore";
 import { RoleSwitcher } from "@/components/layout/RoleSwitcher";
+// STEP 130 Phase 2 Commit 3 — Sidebar header artwork i18n display locale toggle.
+// 별도 dimension (STEP 96 TranslationLocaleSelector 와 통합 절대 금지).
+import { SidebarLocaleToggle } from "@/components/layout/SidebarLocaleToggle";
 import { hasPermission, permissionHint } from "@/lib/rbac";
 import { cn, STATE_LABEL_KR } from "@/lib/utils";
 import { getActiveRemoteAdapter } from "@/lib/persistence";
@@ -374,8 +377,13 @@ export function Sidebar() {
 
   return (
     <aside className="flex flex-col h-full w-[240px] shrink-0 bg-surface border-r border-line">
-      {/* Logo */}
-      <div className="flex items-center h-14 px-5 border-b border-line">
+      {/* Logo + STEP 130 Phase 2 Commit 3 — Sidebar header locale toggle.
+          rule_14 정합 (Sidebar 240px 폭 무손상). justify-between 으로 좌측 brand
+          identity / 우측 utility (locale toggle) 시각적 분리. STEP 96
+          TranslationLocaleSelector 와 dimension 분리 — 본 toggle 은 *artwork
+          i18n display* 영역 (storage-level), Translation Layer 는 *document
+          content AI 번역* 영역 (runtime). 통합 절대 금지. */}
+      <div className="flex items-center justify-between h-14 px-5 border-b border-line">
         <div className="flex items-baseline gap-2">
           <span className="text-[17px] font-semibold tracking-[0.18em] text-ink">
             AXVELA
@@ -384,6 +392,7 @@ export function Sidebar() {
             OS
           </span>
         </div>
+        <SidebarLocaleToggle />
       </div>
 
       {/* Nav */}
