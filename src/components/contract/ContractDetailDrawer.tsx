@@ -16,6 +16,8 @@ import { ButtonHint } from "@/components/ui/ButtonHint";
 import type { Contract, ContractStatus } from "@/types/contract";
 import type { Transaction } from "@/types/transaction";
 import type { Artwork } from "@/types/artwork";
+// STEP 129 — Contract 인쇄 surface mount (LOCKED 한정)
+import { ContractPrintView } from "./ContractPrintView";
 // Document Lifecycle Clarity STEP — parity with Invoice drawer (Timeline + Approval slot only)
 import { DocumentActivityTimeline } from "@/components/document-lifecycle/DocumentActivityTimeline";
 import { ApprovalSlotPlaceholder } from "@/components/document-lifecycle/ApprovalSlotPlaceholder";
@@ -58,22 +60,33 @@ export function ContractDetailDrawer() {
     : undefined;
 
   return (
-    <Drawer
-      open={isOpen}
-      onClose={closeContractDetail}
-      title={contract ? `계약 상세 · v${contract.version}` : "계약 상세"}
-    >
-      {isOpen && contract && transaction && artwork && (
-        <ContractView
-          key={contract.id}
-          contract={contract}
-          transaction={transaction}
-          artwork={artwork}
-          parent={parent}
-          onClose={closeContractDetail}
-        />
+    <>
+      <Drawer
+        open={isOpen}
+        onClose={closeContractDetail}
+        title={contract ? `계약 상세 · v${contract.version}` : "계약 상세"}
+      >
+        {isOpen && contract && transaction && artwork && (
+          <ContractView
+            key={contract.id}
+            contract={contract}
+            transaction={transaction}
+            artwork={artwork}
+            parent={parent}
+            onClose={closeContractDetail}
+          />
+        )}
+      </Drawer>
+
+      {/* STEP 129 — Hidden printable area. LOCKED contract 한정 (DRAFT/REVIEW
+          /APPROVED 단계 인쇄 미지원 — 정식 매매 계약서는 LOCK 후 출력).
+          STEP 87/89 PrintView 패턴 답습. */}
+      {isOpen && contract && transaction && artwork && contract.status === "LOCKED" && (
+        <div className="hidden print:block">
+          <ContractPrintView contract={contract} artwork={artwork} transaction={transaction} />
+        </div>
       )}
-    </Drawer>
+    </>
   );
 }
 
@@ -253,6 +266,14 @@ function ReadOnlyContractView({
 
   const handleApprove = () => approveContract(contract.id);
   const handleLock = () => lockContract(contract.id);
+
+  // STEP 129 — 인쇄 / PDF 저장 (browser native window.print). LOCKED 상태
+  // 한정 — 정식 매매 계약서 출력. STEP 87/89 패턴 답습.
+  const handlePrint = () => {
+    if (typeof window !== "undefined") {
+      window.setTimeout(() => window.print(), 50);
+    }
+  };
   const handleNewVersion = () => createContractVersion(contract.id);
 
   return (
@@ -393,6 +414,12 @@ function ReadOnlyContractView({
               LOCK
             </Button>
           </div>
+        )}
+        {/* STEP 129 — LOCKED 시 인쇄 button (LOCK 진입 후 정식 매매 계약서 출력) */}
+        {isLocked && (
+          <Button type="button" variant="ghost" onClick={handlePrint}>
+            인쇄 / PDF 저장
+          </Button>
         )}
         {isLocked && (
           <Button type="button" variant="primary" onClick={handleNewVersion}>

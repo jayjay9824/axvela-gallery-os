@@ -20,6 +20,9 @@ import {
 import type { Invoice, InvoiceStatus } from "@/types/invoice";
 import type { Transaction, Currency } from "@/types/transaction";
 import type { Artwork } from "@/types/artwork";
+// STEP 129 — Invoice PRE/FINAL 분기 + 인쇄 surface mount
+import { getInvoiceKind } from "@/lib/invoice-helpers";
+import { InvoicePrintView } from "./InvoicePrintView";
 import { DocumentWritingAssistButton } from "@/components/document/DocumentWritingAssistButton";
 import { TranslationToolbar } from "@/components/translation";
 // Document Lifecycle Clarity STEP — lifecycle helpers + sub-components
@@ -77,22 +80,33 @@ export function InvoiceDetailDrawer() {
     : undefined;
 
   return (
-    <Drawer
-      open={isOpen}
-      onClose={closeInvoiceDetail}
-      title={inv ? `Invoice 상세 · v${inv.version}` : "Invoice 상세"}
-    >
-      {isOpen && inv && tx && artwork && (
-        <InvoiceView
-          key={inv.id}
-          invoice={inv}
-          transaction={tx}
-          artwork={artwork}
-          parent={parent}
-          onClose={closeInvoiceDetail}
-        />
+    <>
+      <Drawer
+        open={isOpen}
+        onClose={closeInvoiceDetail}
+        title={inv ? `Invoice 상세 · v${inv.version}` : "Invoice 상세"}
+      >
+        {isOpen && inv && tx && artwork && (
+          <InvoiceView
+            key={inv.id}
+            invoice={inv}
+            transaction={tx}
+            artwork={artwork}
+            parent={parent}
+            onClose={closeInvoiceDetail}
+          />
+        )}
+      </Drawer>
+
+      {/* STEP 129 — Hidden printable area. window.print() 트리거 시에만 보임.
+          locked invoice 한정 (DRAFT 단계 인쇄 미지원 — PRE 도 SENT/LOCK 진입
+          후 pro-forma 출력 가능). STEP 87 ReceiptDetailDrawer 패턴 답습. */}
+      {isOpen && inv && tx && artwork && inv.isLocked && (
+        <div className="hidden print:block">
+          <InvoicePrintView invoice={inv} artwork={artwork} transaction={tx} />
+        </div>
       )}
-    </Drawer>
+    </>
   );
 }
 
@@ -129,6 +143,12 @@ function DraftInvoiceForm({
 }: InvoiceViewProps) {
   const updateInvoice = useArtworkStore((s) => s.updateInvoice);
   const sendInvoice = useArtworkStore((s) => s.sendInvoice);
+
+  // STEP 129 — 4-layer 방어 layer (d): send button label PRE/FINAL 분기.
+  // PRE = buyer 안내용 pro-forma 발송, FINAL = 결제용 정식 인보이스 발송.
+  const invoiceKind = getInvoiceKind(invoice);
+  const sendButtonLabel =
+    invoiceKind === "pre" ? "PRE (안내용) 발송" : "결제용 Invoice 발송";
 
   const [amountRaw, setAmountRaw] = React.useState(String(invoice.amount));
   const [currency, setCurrency] = React.useState<Currency>(invoice.currency);
@@ -259,7 +279,7 @@ function DraftInvoiceForm({
           disabled={numericAmount <= 0}
           aria-disabled={numericAmount <= 0}
         >
-          Invoice 발송
+          {sendButtonLabel}
         </Button>
       </footer>
     </form>
@@ -307,6 +327,15 @@ function LockedInvoiceView({
     () => versionChain.map((e) => e.invoice.id),
     [versionChain]
   );
+
+  // STEP 129 — 인쇄 / PDF 저장 (browser native window.print). STEP 87 Receipt
+  // / STEP 89 TaxInvoice 패턴 답습. PRE invoice 의 경우 InvoicePrintView 가
+  // "PRO FORMA — NOT FOR PAYMENT" watermark 자동 표시.
+  const handlePrint = () => {
+    if (typeof window !== "undefined") {
+      window.setTimeout(() => window.print(), 50);
+    }
+  };
 
   // 새 버전 생성 — 옵셔널 사유 prompt (rule_16 minimalism — 큰 modal 회피, 기본
   // browser prompt로 가벼운 입력 받음. 향후 STEP에서 본격적인 inline form으로
@@ -470,6 +499,10 @@ function LockedInvoiceView({
       <footer className="border-t border-line px-6 py-3.5 shrink-0 flex items-center justify-end gap-2 bg-surface">
         <Button type="button" variant="ghost" onClick={onClose}>
           닫기
+        </Button>
+        {/* STEP 129 — 인쇄 / PDF 저장 (browser native, STEP 87/89 답습) */}
+        <Button type="button" variant="ghost" onClick={handlePrint}>
+          인쇄 / PDF 저장
         </Button>
         <Button
           type="button"
