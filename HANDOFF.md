@@ -1,6 +1,7 @@
 # AXVELA Gallery OS — Session Handoff
 
-> **작성**: 2026-05-08 (STEP 118 완료 시점 갱신 — Phase 4 Registration Tabs Structure 정착, **Stage 2 진행 중 2/3**)
+> **작성**: 2026-05-12 (STEP 128 Phase 1 완료 시점 갱신 — AXVELA PASSPORT Architecture Review doc-only 정착, **Phase 4 Stage 3 Architecture 진행 중**)
+> **이전 갱신**: 2026-05-08 (STEP 118 완료 시점 — Phase 4 Stage 2 진행 중 2/3)
 > **목적**: 새 채팅 세션 / VS Code 작업 환경에 컨텍스트 전달
 > **다음 채팅에서**: 본 파일을 읽기 전에 `STEP_INDEX.md`를 우선 참조 — STEP 분류 / 상태 / 중복 방지 / Do Not Duplicate guard 모두 거기에. Multi-STEP 세션 진입 시 **`AXVELA_DEV_CONVENTION.md`의 §2 Partial-State Rules의 7-step checklist를 *항상* 실행**. **Phase 4 진행 중 진입 시 `AXVELA_WORKFLOW_ARCHITECTURE.md` §4 Implementation Constraints 가 1차 reference**.
 
@@ -9,15 +10,20 @@
 ## 🎯 현재 상태
 
 ```
-Build:          ✅ green (npx next build, tsc --noEmit, next lint, 72/72 scenarios PASS)
-Route:          189 kB / 276 kB First Load JS  (STEP 118 +1 kB / +1 kB — TabBar + curation textarea functional)
-Last STEP:      STEP 118 (Registration Tabs Structure) ✅ — Stage 2 진행 중 2/3
-Latest ZIP:     axvela-step118-registration-tabs.zip
+Build:          ✅ green (npx next build, tsc --noEmit, next lint, 83/83 scenarios PASS)
+Route:          191 kB / 278 kB First Load JS  (STEP 124~128 누적 Δ 0 byte from STEP 118 baseline)
+Last STEP:      STEP 128 Phase 1 (AXVELA PASSPORT Architecture Review, doc-only) ✅
+Latest ZIP:     axvela-step128-passport-architecture-review.zip
 Phase 1 Fiscal: ✅ 6/6 frozen (foundation freeze)
 Phase 3 Intel:  ✅ 5/8 (STEP 92~96)
-Phase 4 WF:     🟡 6/10 (STEP 113 + 114 + 115 + 119 + 116 + 118 — Stage 1 ✅ / Stage 2 진행 중 2/3)
-영구 정책 문서: 7개
+Phase 4 WF:     🟡 8/N (STEP 113~119 + 124~128 — Stage 1 ✅ / Stage 2 ✅ / Stage 3 진행 중)
+영구 정책 문서: 7개 (AXVELA_AI_DIRECTION / AXVELA_AI_INTEGRATION / AXVELA_DEV_CONVENTION / AXVELA_FISCAL_ARCHITECTURE / AXVELA_TRUST_LAYER / AXVELA_WORKFLOW_ARCHITECTURE + STEP_INDEX navigation)
 UX track:       ✅ 3/3 완성
+
+# 다음 STEP 진입 — STEP 128 Phase 1 review 의 §9 사용자 결정 10 항목 승인 후 STEP 129 entry briefing
+# STEP 129~135 revised roadmap 정착 (STEP 128 §7) — 7 STEP × Phase 1/2 분리 = 14 turn
+# 다음 STEP 진입 전 docs/steps/STEP_128_PHASE_1_ARCHITECTURE_REVIEW.md 의 §9 체크리스트 우선 확인 의무
+# PASSPORT 디자인 자산 (docs/design/passport/PASSPORT-1.png + PASSPORT-1_SPEC.md) untracked 보존 — STEP 131 진입 시 git add
 ```
 
 ---
