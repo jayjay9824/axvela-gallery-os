@@ -89,6 +89,13 @@ import {
   type PersistedState,
   SCHEMA_VERSION,
 } from "@/lib/persistence";
+// STEP 130 Phase 2 Commit 2 — UI display locale slice (rule_5 사용자 명시 선택,
+// AI 자동 변경 금지). DocumentLocale = STEP 96 정착 (AILocale alias, 4-locale
+// ko/en/ja/zh). DEFAULT_DOCUMENT_LOCALE = "ko" — 갤러리 운영 baseline.
+import {
+  DEFAULT_DOCUMENT_LOCALE,
+  type DocumentLocale,
+} from "@/lib/document-locale";
 import type { ArtworkDraftState } from "@/types/artwork-draft";
 import {
   MOCK_ARTWORKS,
@@ -642,6 +649,64 @@ interface ArtworkUIState {
   setCurrentRole: (role: Role) => void;
   /** Permission predicate — same logic as rbac.hasPermission, scoped to current role. */
   can: (permission: Permission) => boolean;
+
+  // ── STEP 130 Phase 2 Commit 2 — Display Locale (UI session 슬라이스) ──────
+  //
+  // **본 슬라이스의 정체**:
+  //   UI 표시 언어 (Sidebar header locale toggle, future ArtworkGrid / DetailPanel
+  //   / Drawer 의 artwork title / artist name projection). `currentLocale` 의
+  //   값에 따라 i18n-helpers (`getTitle` / `getArtistName`, STEP 130 Commit 1
+  //   `01a1540` 정착) 가 다른 locale projection 반환.
+  //
+  // **rule_5 AI-Human Loop 정합** (필수 명시):
+  //   - `currentLocale` 은 *사용자 명시 선택* — Sidebar locale toggle 클릭으로만 set.
+  //   - AI 자동 변경 절대 금지 — Translation Layer (STEP 96) 가 자동 호출 0건.
+  //   - 운영자의 표시 의도 = 단일 진실 원천 (사용자 spec rule_5).
+  //
+  // **STEP 96 Translation Layer 와의 dimension 분리** (필수 명시 — 통합 절대 금지):
+  //   - `currentLocale` (본 슬라이스) = *storage-level artwork i18n* 표시 선택.
+  //     artwork.titleI18n? / artist.nameI18n? optional slot 의 어떤 locale projection
+  //     을 화면에 보여줄지 결정. 운영자 명시 입력 데이터 read.
+  //   - `TranslationToolbar` (STEP 96) = *runtime AI projection* 의 target locale.
+  //     Invoice / Receipt / TaxInvoice 등 document content 의 동적 AI 번역.
+  //     local state, ephemeral cache, document entity schema 미변경.
+  //   - 두 layer 의도적 별도 dimension — 통합 절대 금지. 두 locale 은 같은 enum
+  //     (DocumentLocale = AILocale) 을 공유하지만, *어디서 어떻게 사용되는가* 가 다름.
+  //
+  // **STEP 130 Phase 1 §store rationale** (currentLocale 의미 lock):
+  //   - currentLocale = UI 표시 언어 선택 (어떤 데이터를 보여줄지)
+  //   - 데이터 영구 저장 언어 아님 — artwork.title / artist.name 의 *원본* 은
+  //     항상 한국어 baseline (rule_1 Physical Root Key 일관).
+  //   - `getTitle(artwork, currentLocale)` chain 의 *입력* 으로만 사용 — fallback
+  //     chain 의 최종은 항상 원본 한국어 (Phase 1 ~ STEP 129 데이터 호환).
+  //
+  // **Deferred Item D-130-1 reference** (i18n-helpers.scenarios §4):
+  //   `getTitle` 의 nullish `??` chain 거동상 `titleI18n[locale] = ""` 빈 문자열
+  //   은 nullish 아님 → 그대로 반환 (공란 표시). 의미 결정 (공란 vs 다음 fallback)
+  //   STEP 131 또는 134 재검토. 본 슬라이스는 currentLocale 의 *값 selection* 만
+  //   담당 — 빈 문자열 fallback 정책은 helper 본문 영역.
+  //
+  // **Persistence 정책 — 옵션 P1 (Persistence 0)** (필수 명시):
+  //   본 슬롯은 `PersistedState` interface (src/lib/persistence.ts §59) 에
+  //   *추가되지 않음* → 자연 미 persist. 브라우저 재시작 시 항상 DEFAULT_DOCUMENT_LOCALE
+  //   ("ko") 로 초기화. 사용자 spec §9 항목 2 (P1 채택) 정확 정합.
+  //
+  //   `currentRole` 과 동일 패턴 — 기존 정착물 (line 641, RBAC 슬라이스) 도
+  //   PersistedState 부재로 자연 미 persist. UI session state 의 표준 정책.
+  //
+  // **resetAllData 정합**:
+  //   `resetAllData()` 호출 시 DEFAULT_DOCUMENT_LOCALE 로 복귀 (사용자 spec §9
+  //   항목 3). `currentRole` 은 reset 시 *보존* 되는 정책과 의도적 분리 — locale 은
+  //   UI 표시 선호도이므로 도메인 초기화와 함께 자연스럽게 baseline 복귀가 일관성.
+  currentLocale: DocumentLocale;
+  /**
+   * Display locale setter — 단순 setter (Sidebar header toggle 진입점).
+   *
+   * **rule_5 AI-Human Loop**: 사용자 명시 클릭으로만 호출. AI 자동 호출 금지.
+   * **audit log emit 0건**: locale 전환은 운영 기록 가치 미존재 (display 선호도
+   * 영역). `setCurrentRole` 의 권한 변경 audit (STEP 82) 정착물과 의도적 분리.
+   */
+  setLocale: (locale: DocumentLocale) => void;
 
   // Selection / filter
   select: (id: string | null) => void;
@@ -1371,6 +1436,13 @@ export const useArtworkStore = create<ArtworkUIState>((set, get) => ({
   // Default to MANAGER — the most common operator profile. Owner/Staff are
   // selectable via sidebar role switcher to demonstrate gating behavior.
   currentRole: "MANAGER",
+
+  // --- STEP 130 Phase 2 Commit 2 — Display Locale 초기값 ----------------------
+  // DEFAULT_DOCUMENT_LOCALE = "ko" 재활용 (§8 발견 — STEP 96 정착물 `document-
+  // locale.ts:82`). 옵션 P1 (Persistence 0) 채택 — PersistedState 미추가로
+  // 자연 미 persist, 브라우저 재시작 시 항상 "ko" 로 초기화. 사용자 spec §9
+  // 항목 2 정확 정합.
+  currentLocale: DEFAULT_DOCUMENT_LOCALE,
   // STEP 82 — Permission Change Audit. role 전환 자체를 system audit log에
   // 영속화. RoleSwitcher markup은 0줄 변경 (audit는 store 내부에서 처리).
   //
@@ -1414,6 +1486,13 @@ export const useArtworkStore = create<ArtworkUIState>((set, get) => ({
     set({ currentRole: role });
   },
   can: (permission) => hasPermission(get().currentRole, permission),
+
+  // --- STEP 130 Phase 2 Commit 2 — Display Locale setter ---------------------
+  // 단순 setter — set({ currentLocale: locale }). audit log emit 0건 (display
+  // 선호도 영역, `setCurrentRole` 의 STEP 82 권한 변경 audit 정착물과 의도적
+  // 분리). rule_5 AI-Human Loop 정합 — 사용자 명시 클릭 (Sidebar locale toggle,
+  // Commit 3 영역) 으로만 호출 진입. AI 자동 호출 절대 금지.
+  setLocale: (locale) => set({ currentLocale: locale }),
 
   // --- Selection / filter ---------------------------------------------------
   select: (id) => set({ selectedArtworkId: id }),
@@ -6252,6 +6331,13 @@ export const useArtworkStore = create<ArtworkUIState>((set, get) => ({
       backupMetadata: { lastBackupAt: null },
       collectorViewRequest: { kind: "closed" },
       marketAnalysisRequest: { kind: "closed" },
+
+      // STEP 130 Phase 2 Commit 2 — Display locale 도 초기값 복귀.
+      // 사용자 spec §9 항목 3 정합 — resetAllData 시 locale 도 DEFAULT_DOCUMENT_LOCALE
+      // ("ko") baseline 으로 복귀. `currentRole` 의 reset 시 보존 정책과 의도적
+      // 분리 — locale 은 UI 표시 선호도이므로 도메인 초기화와 함께 baseline 복귀가
+      // 일관성 (운영자가 "초기화" 의도면 표시 언어도 갤러리 baseline 복귀가 자연).
+      currentLocale: DEFAULT_DOCUMENT_LOCALE,
     });
 
     // STEP 81 — backup metadata clear audit. resetAllData가 도메인 데이터를
