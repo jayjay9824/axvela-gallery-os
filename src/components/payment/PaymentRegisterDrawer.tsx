@@ -21,6 +21,9 @@ import type { PaymentMethod } from "@/types/payment";
 import type { Invoice } from "@/types/invoice";
 import type { Transaction } from "@/types/transaction";
 import type { Artwork } from "@/types/artwork";
+// STEP 129 — rule_3 Money Flow Separation defense in depth layer (c):
+// PRE invoice UI guard (disabled + 안내 banner). STEP 127 Phase 1 §2.4.
+import { canRegisterPaymentFor } from "@/lib/invoice-helpers";
 
 const METHOD_OPTIONS = (
   Object.keys(PAYMENT_METHOD_LABEL) as PaymentMethod[]
@@ -122,6 +125,11 @@ function PaymentForm({
 
   const willTransitionArtwork = artwork.state === "DEAL";
 
+  // STEP 129 — defense in depth layer (c): PRE invoice 결제 등록 차단 UI.
+  // PRE 는 pro-forma / buyer 안내용 — 실제 결제 대상 아님 (rule_3 Money Flow
+  // Separation). Submit button disabled + 안내 banner + 필드 disabled.
+  const isPreInvoice = !canRegisterPaymentFor(invoice);
+
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setAmountRaw(e.target.value.replace(/[^\d]/g, ""));
   };
@@ -141,7 +149,9 @@ function PaymentForm({
     onCancel();
   };
 
-  const isSubmittable = numericAmount > 0 && !!paidAt;
+  // STEP 129 — PRE invoice 의 경우 submit 불가 (defense in depth: store-side
+  // guard 가 silent reject 하지만, UI 차원에서도 명시적 차단).
+  const isSubmittable = numericAmount > 0 && !!paidAt && !isPreInvoice;
   const amountMismatch =
     numericAmount > 0 && numericAmount !== invoice.amount;
 
@@ -186,21 +196,35 @@ function PaymentForm({
           </p>
         </div>
 
-        {/* Cascade preview — what this action will do (rule_3 transparency) */}
-        <div className="mb-5 px-3 py-2.5 rounded-md bg-status-paid/5 border border-status-paid/30">
-          <p className="text-[11.5px] text-status-paid tracking-tightish font-medium">
-            결제 등록 시 자동 처리됩니다
-          </p>
-          <ul className="mt-1.5 space-y-0.5 text-[10.5px] text-ink-muted tracking-tightish">
-            <li>· Invoice → 결제 완료</li>
-            <li>· Transaction → 결제 수령</li>
-            {willTransitionArtwork && (
-              <li>
-                · 작품 상태 → {STATE_LABEL_KR.DEAL} → {STATE_LABEL_KR.PAID}
-              </li>
-            )}
-          </ul>
-        </div>
+        {/* STEP 129 — PRE invoice 차단 안내. 정상 cascade preview 대체 표시. */}
+        {isPreInvoice ? (
+          <div className="mb-5 px-3 py-2.5 rounded-md bg-status-deal/5 border border-status-deal/40">
+            <p className="text-[11.5px] text-status-deal tracking-tightish font-medium">
+              PRE 인보이스는 결제 대상이 아닙니다
+            </p>
+            <p className="mt-1.5 text-[10.5px] text-ink-muted leading-relaxed tracking-tightish">
+              본 인보이스는 *pro-forma* (예비) 안내용 문서입니다. 실제 결제는
+              FINAL 인보이스 생성 후 등록하세요. PRE 인보이스는 정산·세무
+              집계에도 포함되지 않습니다 (rule_3 Money Flow Separation).
+            </p>
+          </div>
+        ) : (
+          /* Cascade preview — what this action will do (rule_3 transparency) */
+          <div className="mb-5 px-3 py-2.5 rounded-md bg-status-paid/5 border border-status-paid/30">
+            <p className="text-[11.5px] text-status-paid tracking-tightish font-medium">
+              결제 등록 시 자동 처리됩니다
+            </p>
+            <ul className="mt-1.5 space-y-0.5 text-[10.5px] text-ink-muted tracking-tightish">
+              <li>· Invoice → 결제 완료</li>
+              <li>· Transaction → 결제 수령</li>
+              {willTransitionArtwork && (
+                <li>
+                  · 작품 상태 → {STATE_LABEL_KR.DEAL} → {STATE_LABEL_KR.PAID}
+                </li>
+              )}
+            </ul>
+          </div>
+        )}
 
         <FormSection label="결제 금액">
           <TextField

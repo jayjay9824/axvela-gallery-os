@@ -34,6 +34,8 @@
 // ============================================================================
 
 import type { Invoice, InvoiceStatus } from "@/types/invoice";
+// STEP 129 — PRE invoice fiscal 집계 제외 (rule_3 Money Flow Separation)
+import { getInvoiceKind } from "@/lib/invoice-helpers";
 import type { Receipt, ReceiptStatus } from "@/types/receipt";
 import type { TaxInvoice, TaxInvoiceStatus } from "@/types/tax-invoice";
 import type { Settlement, SettlementStatus } from "@/types/settlement";
@@ -301,7 +303,11 @@ export function buildFiscalSummaryAggregate(
   };
 
   // ── 2. Invoices ────────────────────────────────────────────────────────
+  // STEP 129 — PRE invoice (pro-forma) fiscal 집계 제외. FINAL 만 집계.
+  // rule_3 Money Flow Separation — PRE 는 informational charge document
+  // 이며 실제 money flow 부재.
   const invInRange = input.invoices.filter((i) => {
+    if (getInvoiceKind(i) !== "final") return false;
     const refIso = i.paidAt ?? i.sentAt ?? i.issuedAt;
     if (!refIso) return false;
     const ms = new Date(refIso).getTime();

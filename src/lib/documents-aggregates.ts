@@ -17,6 +17,8 @@
 // ============================================================================
 
 import type { Invoice, InvoiceStatus } from "@/types/invoice";
+// STEP 129 — PRE invoice drilldown 제외 (rule_3 Money Flow Separation)
+import { getInvoiceKind } from "@/lib/invoice-helpers";
 import type { Contract, ContractStatus } from "@/types/contract";
 import type { TaxRecord, TaxRecordStatus } from "@/types/tax";
 import type { ConditionReport, ConditionStatus, ReportType } from "@/types/condition-report";
@@ -129,8 +131,13 @@ export function aggregateDocuments(
   const allRows: DocumentRow[] = [];
 
   // 1. Flatten 4 domains → uniform rows
+  // STEP 129 — PRE invoice (pro-forma) drilldown 행 제외. FINAL 만 노출.
+  // rule_3 Money Flow Separation — PRE 는 informational, 운영 흐름 view 와 분리.
+  // (briefing §2.2 file path deviation: drilldown-resolver.ts → documents-
+  //  aggregates.ts 채택. resolveDocumentsHub 이 본 함수 호출하므로 동일 효과.)
   for (const list of Object.values(input.invoices)) {
     for (const inv of list) {
+      if (getInvoiceKind(inv) !== "final") continue;
       const row = buildInvoiceRow(inv, artworkLookup, txArtworkLookup);
       if (row) allRows.push(row);
     }

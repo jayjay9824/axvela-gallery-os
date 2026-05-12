@@ -19,6 +19,8 @@
 // ============================================================================
 
 import type { Invoice, InvoiceStatus } from "@/types/invoice";
+// STEP 129 — PRE invoice reporting 집계 제외 (rule_3 Money Flow Separation)
+import { getInvoiceKind } from "@/lib/invoice-helpers";
 import type { Settlement, SettlementStatus } from "@/types/settlement";
 import type { TaxRecord, TaxRecordStatus } from "@/types/tax";
 import type { Currency, Transaction } from "@/types/transaction";
@@ -234,6 +236,10 @@ export function computeReportingAggregates(
 
   // ── Invoices ──────────────────────────────────────────────────────────────
   for (const inv of invoices) {
+    // STEP 129 — PRE invoice (pro-forma) reporting 집계 제외. FINAL 만.
+    // rule_3 Money Flow Separation — PRE 는 실제 거래 아님.
+    if (getInvoiceKind(inv) !== "final") continue;
+
     invoiceStatusBreakdown[inv.status] += 1;
 
     let bucket = buckets.get(inv.currency);

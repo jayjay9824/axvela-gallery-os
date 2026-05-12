@@ -16,6 +16,9 @@ import type {
   Currency,
 } from "@/types/transaction";
 import type { Invoice } from "@/types/invoice";
+// STEP 129 — rule_3 Money Flow Separation defense in depth layer (b):
+// registerPayment 진입 시 PRE invoice silent reject guard (STEP 127 Phase 1 §2.4).
+import { canRegisterPaymentFor } from "@/lib/invoice-helpers";
 import type { FXRate } from "@/types/fx";
 import type {
   Payment,
@@ -2747,6 +2750,12 @@ export const useArtworkStore = create<ArtworkUIState>((set, get) => ({
       }
     }
     if (!invoice || !transactionId) return;
+
+    // STEP 129 — rule_3 Money Flow Separation defense in depth layer (b):
+    // PRE invoice (pro-forma) 는 registerPayment trigger 절대 발생 금지 — 실제
+    // money flow 없음. silent reject 정책 (UI layer (c) 가 disabled 안내 담당).
+    // STEP 127 Phase 1 §2.4 의 🔴 CRITICAL 4-layer 방어 중 store-side layer.
+    if (!canRegisterPaymentFor(invoice)) return;
 
     const transaction = Object.values(state.transactions)
       .flat()

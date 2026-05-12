@@ -44,3 +44,24 @@ import type { Invoice } from "@/types/invoice";
 export function getInvoiceKind(invoice: Invoice): "pre" | "final" {
   return invoice.invoiceKind ?? "final";
 }
+
+/**
+ * Invoice 가 결제 등록 대상인지 판정. PRE invoice (pro-forma) 는 결제
+ * 대상 아님 → `false`. FINAL invoice (또는 invoiceKind 미정의 = "final"
+ * fallback) 만 `true`.
+ *
+ * **rule_3 Money Flow Separation 의 type-level guard** (STEP 127 Phase 1
+ * §2.4 의 4-layer 방어 중 layer (a)). 호출 측:
+ *   - `registerPayment` store action 진입 직후 silent reject (layer (b))
+ *   - `PaymentRegisterDrawer` UI 의 disabled 분기 (layer (c))
+ *
+ * **pure** — side effect 0, single argument → boolean.
+ *
+ * @example
+ * canRegisterPaymentFor({ ...inv, invoiceKind: "pre" });   // → false
+ * canRegisterPaymentFor({ ...inv, invoiceKind: "final" }); // → true
+ * canRegisterPaymentFor({ ...inv });                       // → true (fallback "final")
+ */
+export function canRegisterPaymentFor(invoice: Invoice): boolean {
+  return getInvoiceKind(invoice) === "final";
+}

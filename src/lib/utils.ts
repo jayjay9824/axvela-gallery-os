@@ -499,3 +499,37 @@ export const CONDITION_STATUS_ORDER: ConditionStatus[] = [
   "WATCH",
   "DAMAGED",
 ];
+
+// ----------------------------------------------------------------------------
+// STEP 129 — Document AXID display formatter
+//
+// 문서 (Invoice / Contract / Certificate / Passport export) 출력 시점에
+// AXID 의 *display label* 변환. 사용자 spec #5 디자인 자산의 표기 convention
+// `AX-YYYY-KR-NNNNNN` 정합. 시스템 내부 식별자 (`axid.code`) 자체는 변경 0줄
+// (rule_1 Physical Root Key 보존, STEP 127 Phase 1 §2.7 옵션 Z — 디자인 표기
+// 분리, 마이그레이션 0).
+//
+// **STEP 133 forward-compat**: AXID interface 에 `displayLabel?` 옵셔널
+// 슬롯 추가 시 (Optional Slice 9회째 예정) 본 helper 가 자연 합류 — 그
+// 시점에는 `displayLabel` 우선 사용, 부재 시 본 format 변환 fallback.
+//
+// **pure** — single argument → string, side effect 0.
+// ----------------------------------------------------------------------------
+
+/**
+ * Internal axid (e.g. "AXV-2025-0001") → display format ("AX-2025-KR-000001").
+ * 비표준 format (예: legacy seed data) 은 원본 그대로 반환 (fallback).
+ *
+ * @example
+ * formatAxidForDocument({ code: "AXV-2025-0001" });
+ * // → "AX-2025-KR-000001"
+ * formatAxidForDocument({ code: "CUSTOM-FORMAT" });
+ * // → "CUSTOM-FORMAT"  (fallback for non-standard)
+ */
+export function formatAxidForDocument(axid: { code: string }): string {
+  // STEP 127 Phase 1 §2.7 옵션 Z — AXV-YYYY-NNNN → AX-YYYY-KR-NNNNNN
+  const match = axid.code.match(/^AXV-(\d{4})-(\d+)$/);
+  if (!match) return axid.code;
+  const [, year, seq] = match;
+  return `AX-${year}-KR-${seq.padStart(6, "0")}`;
+}
