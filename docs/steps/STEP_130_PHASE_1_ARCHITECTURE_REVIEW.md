@@ -481,3 +481,5 @@ setLocale: (next: DocumentLocale) => void;
 **예상 turn 수**: 3~5 turn (briefing 정정 사이클 1~2건 흡수 가능성).
 
 본 review doc 자체 = Phase 1.1 doc-only commit 으로 종결. Phase 2 는 사용자 명시 신호 후 별도 turn.
+
+→ **Phase 2 구현 완료**: [STEP_130_PHASE_2_COMPLETE.md](STEP_130_PHASE_2_COMPLETE.md)
