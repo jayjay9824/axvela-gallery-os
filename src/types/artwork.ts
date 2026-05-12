@@ -4,6 +4,10 @@
 // ============================================================================
 
 import type { ArtworkRegistrationStatus } from "./artwork-registration-status";
+// STEP 130 — Multilingual schema 정착 (Optional Slice 10회째). DocumentLocale
+// 재활용 (STEP 96 정착물, 4-locale ko/en/ja/zh, AILocale alias). 신설 `Locale`
+// type 폐기 결정 (STEP 130 Phase 1 review §2 + §8).
+import type { DocumentLocale } from "@/lib/document-locale";
 
 /**
  * State machine per rule_6.
@@ -22,8 +26,43 @@ export type ArtworkState =
 
 export interface Artist {
   id: string;
+  /**
+   * Primary artist name (default `ko`, gallery baseline).
+   *
+   * **STEP 130 의미 lock**: 본 field 는 *primary locale (ko 가정) 의 이름*.
+   * 다국어 표시 시 `nameI18n?[locale]` 우선, 미정의 시 본 field fallback.
+   * **변경 0줄 정책 — rule_1 일관 (Physical Root Key 영구 보존)**.
+   */
   name: string;
+  /**
+   * Legacy English name slot (Foundation 시점 정착, 6 files 사용처).
+   *
+   * **STEP 130 정합**: 본 field 는 *backward compat 보존*. 신규 다국어 입력은
+   * `nameI18n?` 우선, 본 field 는 `nameI18n?.en` 부재 시 fallback chain 의 일부.
+   * `getArtistName(artist, "en")` helper 가 `nameI18n?.en ?? nameEn ?? name`
+   * chain 흡수 — 호출처 28+ 무변경 (옵션 c1 병행, STEP 130 Phase 1 review §5).
+   * 미래 deprecation 결정 시 별도 STEP.
+   */
   nameEn?: string;
+  /**
+   * STEP 130 — Multilingual name slot (Optional Slice 10회째 답습).
+   *
+   * **persistence v1 호환**: 옵셔널 슬롯 — 기존 Artist 데이터 (Phase 1 ~
+   * STEP 129) 모두 undefined 상태 보존. validateV1 무변경, SCHEMA_VERSION
+   * "v1" 변경 0. 자연 forward-compat.
+   *
+   * **사용 정책**:
+   *   - `getArtistName(artist, locale)` 호출이 단일 derivation point (STEP 127
+   *     `getInvoiceKind` 패턴 답습).
+   *   - 호출처는 본 field 직접 접근 금지 — helper layer 만 호출.
+   *   - chain: `nameI18n?[locale] ?? (locale === "en" ? nameEn : undefined)
+   *           ?? name`.
+   *
+   * **rule_5 AI-Human Loop**: 본 field 는 *사용자 명시 입력* 데이터. AI 동적
+   * 변환 (STEP 96 TranslationToolbar) 와는 별도 dimension — runtime AI projection
+   * 은 본 field 미사용.
+   */
+  nameI18n?: Partial<Record<DocumentLocale, string>>;
 }
 
 /**
@@ -38,7 +77,37 @@ export interface AXID {
 export interface Artwork {
   id: string;
   axid: AXID;
+  /**
+   * Primary artwork title (default `ko`, gallery baseline).
+   *
+   * **STEP 130 의미 lock**: 본 field 는 *primary locale 의 제목*. 다국어 표시
+   * 시 `titleI18n?[locale]` 우선, 미정의 시 본 field fallback. **변경 0줄
+   * 정책** — rule_1 Physical Root Key 일관 + Phase 1 ~ STEP 129 모든 데이터
+   * 호환.
+   */
   title: string;
+  /**
+   * STEP 130 — Multilingual title slot (Optional Slice 10회째 답습).
+   *
+   * **persistence v1 호환**: 옵셔널 슬롯 — 기존 Artwork 데이터 (Phase 1 ~
+   * STEP 129) 모두 undefined 상태 보존. validateV1 무변경, SCHEMA_VERSION
+   * "v1" 변경 0.
+   *
+   * **사용 정책**:
+   *   - `getTitle(artwork, locale)` 호출이 단일 derivation point (STEP 127
+   *     `getInvoiceKind` 패턴 답습).
+   *   - 호출처는 본 field 직접 접근 금지 — helper layer 만 호출.
+   *   - chain: `titleI18n?[locale] ?? titleI18n?["en"] ?? title`.
+   *
+   * **STEP 96 Translation Layer 와의 dimension 분리**: 본 field 는 *영구
+   * 저장된 사용자 입력 다국어 데이터*. STEP 96 TranslationToolbar 의 *runtime
+   * AI projection* 과는 별도 layer (STEP 130 Phase 1 review §1 Two-Layer
+   * Curation Model 패턴 답습).
+   *
+   * **사용처 wire**: 본 STEP 130 = infrastructure 정착만, 사용처 (Drawer /
+   * Print / Passport / ArtworkGrid) wire 는 STEP 131+ 점진적 적용.
+   */
+  titleI18n?: Partial<Record<DocumentLocale, string>>;
   artist: Artist;
   year: number;
   medium: string;
