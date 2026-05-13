@@ -1,11 +1,16 @@
 "use client";
 
 import * as React from "react";
+import { useDrag } from "@use-gesture/react";
 import { useArtworkStore } from "@/store/useArtworkStore";
 import { RoleSwitcher } from "@/components/layout/RoleSwitcher";
 // STEP 130 Phase 2 Commit 3 — Sidebar header artwork i18n display locale toggle.
 // 별도 dimension (STEP 96 TranslationLocaleSelector 와 통합 절대 금지).
 import { SidebarLocaleToggle } from "@/components/layout/SidebarLocaleToggle";
+// STEP 131.5 Phase 2 Commit 1 — Mobile-first navigation chrome (Foundation 정착물).
+// Sidebar 240px Desktop 정착물의 *별도 dimension* — naive responsive 회피, Mobile
+// Responsive Surface Layer 정합 (rule_14 보강 spec, Phase 1 §5.2 정착).
+import { MobileTopNav } from "@/components/mobile/MobileTopNav";
 import { hasPermission, permissionHint } from "@/lib/rbac";
 import { cn, STATE_LABEL_KR } from "@/lib/utils";
 import { getActiveRemoteAdapter } from "@/lib/persistence";
@@ -71,11 +76,74 @@ interface ApprovalItem {
   open: () => void;              // click handler — opens the relevant drawer
 }
 
+// STEP 131.5 Phase 2 Commit 2 — Mobile drawer swipe-left-to-close threshold.
+// 사용자 §11 (g) 결정 정합 (@use-gesture/react). rule_16 정합 (과한 sensitivity
+// 회피, 의도적 swipe gesture 만 close trigger). PassportUnfoldView 의 vertical
+// threshold (120px) 와 같은 정신 — Mobile native 의도성 정합.
+const SIDEBAR_SWIPE_CLOSE_THRESHOLD_PX = 80;
+
 export function Sidebar() {
   const artworks = useArtworkStore((s) => s.artworks);
   const contracts = useArtworkStore((s) => s.contracts);
   const settlements = useArtworkStore((s) => s.settlements);
   const taxRecords = useArtworkStore((s) => s.taxRecords);
+
+  // STEP 131.5 Phase 2 Commit 2 — Mobile drawer state.
+  //
+  // **Multi-Surface Architecture 정합** (Phase 1 §4 정착):
+  //   Sidebar 의 *Desktop static 240px 영역* (rule_14 정착물 보존) 과 *Mobile
+  //   drawer 영역* (Phase 1 §5.2 보강 spec 의 Mobile Responsive Surface Layer
+  //   정착) 의 dimension 분리. Tailwind `md:` 분기 클래스 단독 — JS viewport
+  //   감지 0건 (SSR hydration 안전, §8.2 (d) 의 CSS-only 분기 결정 정합).
+  //
+  // **기존 application drawer 시스템과의 dimension 분리** (필수 명시):
+  //   본 `mobileOpen` state = *navigation drawer* (Sidebar 의 mobile 대체
+  //   surface). rule_18 정착물의 *artwork detail drawer* (Contract /
+  //   Settlement / Tax / Audit / Documents 등) 와 **본질 다른 surface** —
+  //   같은 단어 "drawer" 사용하지만 의도적 의미 분리.
+  //   - Application drawers: artwork.id keyed, DetailPanel 우측 slide-in,
+  //     운영자 detail workflow
+  //   - Navigation drawer (본 state): Sidebar 자체의 mobile slide-in,
+  //     navigation chrome 영역 단독
+  //
+  // **rule_5 AI-Human Loop**: open/close 모두 사용자 명시 인터랙션 (햄버거
+  // 클릭 / backdrop 클릭 / swipe-left). AI 자동 호출 0건.
+  //
+  // **rule_17 정합**: 페이지 이동 0건 (Sidebar 영역 내부 slide). PASSPORT spec
+  // §4 의 "drawer/modal 금지" 는 *Passport surface* 영역 정책 — 본 navigation
+  // drawer 는 chrome 영역, 정합 영역 다름.
+  const [mobileOpen, setMobileOpen] = React.useState(false);
+
+  // STEP 131.5 Phase 2 Commit 2 — MobileTopNav locale wire.
+  //
+  // SidebarLocaleToggle (STEP 130 self-contained 정착물) 와 MobileTopNav
+  // (props-driven, Commit 1 Foundation) 가 같은 store 진입점 (`currentLocale` /
+  // `setLocale`). 두 컴포넌트 동시 mount 시 (이론상 mobile 폭에서는 SidebarLocaleToggle
+  // 도 drawer 안에 존재, MobileTopNav 도 top bar) Zustand selector 가 dedup —
+  // 단일 진실 원천 보장.
+  const currentLocale = useArtworkStore((s) => s.currentLocale);
+  const setLocale = useArtworkStore((s) => s.setLocale);
+
+  // STEP 131.5 Phase 2 Commit 2 — Swipe-left-to-close gesture (@use-gesture/react).
+  //
+  // 사용자 §11 (g) 결정 정합 (@use-gesture/react). PassportUnfoldView 의 vertical
+  // drag 패턴 답습 — drawer 의 horizontal-only drag detection. drag 진행 중 시각
+  // feedback 은 의도적 단순 (CSS transition 단독, 과한 motion 회피, rule_16).
+  const drawerBind = useDrag(
+    ({ down, movement: [mx], cancel }) => {
+      // 우측 drag 무시 (close 의도 단독, open 은 햄버거 클릭)
+      if (mx > 0) return;
+      // Drag 종료 + threshold 초과 시 close
+      if (!down && Math.abs(mx) > SIDEBAR_SWIPE_CLOSE_THRESHOLD_PX) {
+        cancel();
+        setMobileOpen(false);
+      }
+    },
+    {
+      axis: "x", // horizontal-only — Sidebar 의 nav 영역 vertical scroll 무손상
+      filterTaps: true,
+    },
+  );
 
   const select = useArtworkStore((s) => s.select);
   const openContractDetail = useArtworkStore((s) => s.openContractDetail);
@@ -376,8 +444,63 @@ export function Sidebar() {
   ]);
 
   return (
-    <aside className="flex flex-col h-full w-[240px] shrink-0 bg-surface border-r border-line">
-      {/* Logo + STEP 130 Phase 2 Commit 3 — Sidebar header locale toggle.
+    <>
+      {/* ============================================================
+          STEP 131.5 Phase 2 Commit 2 — Mobile Top Nav (≤768px only)
+          ============================================================
+          Multi-Surface Architecture 정착 (Phase 1 §4) — 사용자 §11 (h) 결정
+          정합 (Smartphone 우선, Tailwind `md:` breakpoint = 768px). Desktop
+          영역 (≥md) 완전 hidden — rule_14 Desktop Layout Contract 무영향.
+       */}
+      <div className="md:hidden">
+        <MobileTopNav
+          currentLocale={currentLocale}
+          onLocaleChange={setLocale}
+          onMenuToggle={() => setMobileOpen((prev) => !prev)}
+        />
+      </div>
+
+      {/* ============================================================
+          Mobile Drawer Backdrop (≤768px + open state only)
+          ============================================================
+          Backdrop 클릭 시 close — Mobile native UX 정합 (Apple iOS sheet /
+          Notion drawer 패턴 답습). rule_16 정합 (subtle bg-black/40, 과한
+          shadow / blur 회피).
+       */}
+      {mobileOpen && (
+        <button
+          type="button"
+          aria-label="메뉴 닫기"
+          onClick={() => setMobileOpen(false)}
+          className="fixed inset-0 z-40 bg-black/40 md:hidden cursor-default"
+        />
+      )}
+
+      {/* ============================================================
+          Sidebar — Desktop static (≥md) OR Mobile drawer (≤md)
+          ============================================================
+          Desktop 영역 (`md:` 진입): 기존 240px static aside 그대로 (rule_14
+          정착물 보존, 시각 변경 0).
+          Mobile 영역: fixed left drawer — translate-x 로 open/close,
+          transition 자연 (rule_16 정합, 과한 motion 회피).
+          swipe-left-to-close gesture binding 은 Mobile drawer 영역 한정
+          (Desktop 에서는 inactive — `md:` 분기 클래스에 의해 자연 무영향).
+       */}
+      <aside
+        className={cn(
+          "flex flex-col h-full w-[240px] shrink-0 bg-surface border-r border-line",
+          // Mobile drawer mode — fixed positioning, slide transition
+          "fixed inset-y-0 left-0 z-50",
+          "transition-transform duration-300 ease-out",
+          mobileOpen ? "translate-x-0" : "-translate-x-full",
+          // Desktop mode (≥md) — static positioning, no transition, always visible
+          "md:static md:z-auto md:translate-x-0 md:transition-none",
+          // Touch — drag gesture 영역
+          "touch-pan-y",
+        )}
+        {...drawerBind()}
+      >
+        {/* Logo + STEP 130 Phase 2 Commit 3 — Sidebar header locale toggle.
           rule_14 정합 (Sidebar 240px 폭 무손상). justify-between 으로 좌측 brand
           identity / 우측 utility (locale toggle) 시각적 분리. STEP 96
           TranslationLocaleSelector 와 dimension 분리 — 본 toggle 은 *artwork
@@ -558,7 +681,8 @@ export function Sidebar() {
         <ResetDataButton />
         <SyncStatusIndicator />
       </div>
-    </aside>
+      </aside>
+    </>
   );
 }
 
