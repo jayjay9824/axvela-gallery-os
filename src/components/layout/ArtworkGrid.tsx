@@ -14,6 +14,7 @@ import { ViewModeToggle } from "@/components/artwork/ViewModeToggle";
 import { SearchBar } from "@/components/artwork/SearchBar";
 import { Button } from "@/components/ui/Button";
 import { useArtworkStore } from "@/store/useArtworkStore";
+import { MobilePassportStack } from "@/components/mobile/MobilePassportStack";
 
 export function ArtworkGrid() {
   const artworks = useArtworkStore((s) => s.artworks);
@@ -93,25 +94,56 @@ export function ArtworkGrid() {
               - viewMode === "passport" → PassportCard (Closed Passport, Commit 1)
             grid layout / filter / EmptyState 0줄 변경 — 카드 컴포넌트만 분기. */}
         {filtered.length > 0 ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5">
-            {filtered.map((artwork) =>
-              viewMode === "passport" ? (
-                <PassportCard
-                  key={artwork.id}
-                  artwork={artwork}
-                  isSelected={selectedArtworkId === artwork.id}
-                  onClick={(a) => select(a.id)}
+          <>
+            {/* STEP 131.5 Phase 2 Commit 3 — Mobile (≤768px) Passport Stack wire.
+                §11 (b) 결정 (옵션 A): MobilePassportStack 신설 채택 — Commit 1
+                Foundation 정합. Mobile viewport 에서만 진입 (md:hidden), Desktop
+                ≥769px 무손상. viewMode === "passport" 일 때만 진입 (grid 모드는
+                기존 grid 분기 유지).
+                §11 (h) Smartphone 우선 (≤768px) — Tablet 은 Desktop fallback.
+                Tailwind CSS-only 분기 (Commit 2 Sidebar/TopNav 패턴 정합) — JS
+                viewport 훅 0건, bundle 영향 ~3 kB (MobilePassportStack lazy
+                없이 직접 import). */}
+            {viewMode === "passport" && (
+              <div className="md:hidden">
+                <MobilePassportStack
+                  artworks={filtered}
+                  selectedArtworkId={selectedArtworkId}
+                  onCardTap={(a) => select(a.id)}
                 />
-              ) : (
-                <ArtworkCard
-                  key={artwork.id}
-                  artwork={artwork}
-                  selected={selectedArtworkId === artwork.id}
-                  onSelect={select}
-                />
-              ),
+              </div>
             )}
-          </div>
+
+            {/* Desktop (≥769px) — 기존 grid 분기 보존 (rule_14 Desktop Layout
+                Contract). viewMode === "passport" 일 때만 md:grid 적용 (mobile
+                에서 grid 와 Stack 동시 노출 방지). viewMode === "grid" 는 양쪽
+                viewport 에서 동일 grid 유지 (기존 정착물 무손상). */}
+            <div
+              className={
+                viewMode === "passport"
+                  ? "hidden md:grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5"
+                  : "grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-5"
+              }
+            >
+              {filtered.map((artwork) =>
+                viewMode === "passport" ? (
+                  <PassportCard
+                    key={artwork.id}
+                    artwork={artwork}
+                    isSelected={selectedArtworkId === artwork.id}
+                    onClick={(a) => select(a.id)}
+                  />
+                ) : (
+                  <ArtworkCard
+                    key={artwork.id}
+                    artwork={artwork}
+                    selected={selectedArtworkId === artwork.id}
+                    onSelect={select}
+                  />
+                ),
+              )}
+            </div>
+          </>
         ) : (
           <EmptyState onCreate={openCreate} />
         )}
