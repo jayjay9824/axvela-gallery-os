@@ -96,6 +96,11 @@ import {
   DEFAULT_DOCUMENT_LOCALE,
   type DocumentLocale,
 } from "@/lib/document-locale";
+// STEP 131 Phase 2 Commit 2 — ArtworkGrid surface display mode slice
+// (rule_5 사용자 명시 선택, AI 자동 토글 금지). 본 type-only import 는
+// runtime 의존 0건 (TypeScript erase 후 0 byte). ViewMode 단일 진실 원천 =
+// `src/components/artwork/ViewModeToggle.tsx:76` (Commit 1 정착물).
+import type { ViewMode } from "@/components/artwork/ViewModeToggle";
 import type { ArtworkDraftState } from "@/types/artwork-draft";
 import {
   MOCK_ARTWORKS,
@@ -707,6 +712,50 @@ interface ArtworkUIState {
    * 영역). `setCurrentRole` 의 권한 변경 audit (STEP 82) 정착물과 의도적 분리.
    */
   setLocale: (locale: DocumentLocale) => void;
+
+  // ── STEP 131 Phase 2 Commit 2 — ArtworkGrid Display Mode (UI session) ────
+  //
+  // **본 슬라이스의 정체**:
+  //   ArtworkGrid surface 의 카드 렌더 분기. "grid" / "passport" 2-state.
+  //     - "grid"     → 기존 ArtworkCard (일반 SaaS 카드, STEP 1~129 정착물)
+  //     - "passport" → PassportCard (Closed Passport, STEP 131 신설)
+  //   양 mode 의 데이터 진입점은 동일 (`artworks` store 구독, rule_1 SSOT).
+  //   시각만 분기.
+  //
+  // **rule_5 AI-Human Loop**: ViewModeToggle (Commit 1 정착) 의 사용자 명시
+  // 클릭으로만 set. AI 자동 토글 절대 금지.
+  //
+  // **사용자 §8 항목 1, 2, 3, 6 결정 정합** (STEP 131 Phase 1):
+  //   - 항목 1 (toggle 위치): Grid header (Commit 2 wire)
+  //   - 항목 2 (공존 방식): ArtworkCard + PassportCard 둘 다 보존, 본 슬라이스
+  //     로 토글
+  //   - 항목 3 (확장 방식): ArtworkGrid 확장 + viewMode 분기 (PassportListView
+  //     신설 폐기, ~120 LOC 절약 정합)
+  //   - 항목 6 (persist): P1 — PersistedState 미추가, 세션마다 "grid" 초기화
+  //
+  // **STEP 130 Commit 2 currentLocale P1 패턴 답습**:
+  //   - currentLocale 도 P1 (Persistence 0) — UI session state 표준
+  //   - 본 viewMode 슬라이스는 그 패턴 정확 답습. PersistedState interface 미추가,
+  //     partialize 수정 0건, 브라우저 재시작 시 "grid" 자동 초기화.
+  //   - currentRole (RBAC) / currentLocale / 본 viewMode = UI session state 의
+  //     일관 정책 (모두 P1).
+  //
+  // **resetAllData 정합**:
+  //   `resetAllData()` 호출 시 "grid" 로 복귀 (STEP 130 currentLocale 정합).
+  //   currentRole 의 reset 시 보존 정책과 의도적 분리 — viewMode 도 UI 표시
+  //   선호도이므로 도메인 초기화와 함께 baseline 복귀가 일관성.
+  //
+  // **ViewMode 타입**: `src/components/artwork/ViewModeToggle.tsx:76` 단일
+  // 진실 원천 (Commit 1 정착물). 본 store 는 type-only import — runtime
+  // 의존 0건.
+  viewMode: ViewMode;
+  /**
+   * View mode setter — 단순 setter (Grid header ViewModeToggle 진입점).
+   *
+   * **rule_5**: 사용자 명시 클릭, AI 자동 토글 금지.
+   * **audit log emit 0건**: setLocale 정합 (display 선호도 영역).
+   */
+  setViewMode: (mode: ViewMode) => void;
 
   // Selection / filter
   select: (id: string | null) => void;
@@ -1443,6 +1492,12 @@ export const useArtworkStore = create<ArtworkUIState>((set, get) => ({
   // 자연 미 persist, 브라우저 재시작 시 항상 "ko" 로 초기화. 사용자 spec §9
   // 항목 2 정확 정합.
   currentLocale: DEFAULT_DOCUMENT_LOCALE,
+
+  // --- STEP 131 Phase 2 Commit 2 — ArtworkGrid Display Mode 초기값 ----------
+  // 사용자 §8 항목 6 결정 정합 — default = "grid" (기존 ArtworkCard 정착물
+  // 우선, 운영자 baseline). P1 (Persistence 0) 채택 — currentLocale 패턴 답습,
+  // PersistedState 미추가, 브라우저 재시작 시 "grid" 자동 초기화.
+  viewMode: "grid",
   // STEP 82 — Permission Change Audit. role 전환 자체를 system audit log에
   // 영속화. RoleSwitcher markup은 0줄 변경 (audit는 store 내부에서 처리).
   //
@@ -1493,6 +1548,12 @@ export const useArtworkStore = create<ArtworkUIState>((set, get) => ({
   // 분리). rule_5 AI-Human Loop 정합 — 사용자 명시 클릭 (Sidebar locale toggle,
   // Commit 3 영역) 으로만 호출 진입. AI 자동 호출 절대 금지.
   setLocale: (locale) => set({ currentLocale: locale }),
+
+  // --- STEP 131 Phase 2 Commit 2 — ArtworkGrid Display Mode setter ----------
+  // 단순 setter — set({ viewMode: mode }). audit log emit 0건. rule_5 — 사용자
+  // 명시 클릭 (Grid header ViewModeToggle, 본 commit wire) 으로만 호출. AI
+  // 자동 토글 절대 금지. setLocale 패턴 정확 답습.
+  setViewMode: (mode) => set({ viewMode: mode }),
 
   // --- Selection / filter ---------------------------------------------------
   select: (id) => set({ selectedArtworkId: id }),
@@ -6338,6 +6399,11 @@ export const useArtworkStore = create<ArtworkUIState>((set, get) => ({
       // 분리 — locale 은 UI 표시 선호도이므로 도메인 초기화와 함께 baseline 복귀가
       // 일관성 (운영자가 "초기화" 의도면 표시 언어도 갤러리 baseline 복귀가 자연).
       currentLocale: DEFAULT_DOCUMENT_LOCALE,
+
+      // STEP 131 Phase 2 Commit 2 — ArtworkGrid Display Mode 도 baseline 복귀.
+      // 사용자 §8 항목 6 정합 — default = "grid". currentLocale 패턴 답습
+      // (도메인 초기화 시 UI 표시 선호도도 baseline 복귀 일관성).
+      viewMode: "grid",
     });
 
     // STEP 81 — backup metadata clear audit. resetAllData가 도메인 데이터를

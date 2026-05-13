@@ -80,6 +80,17 @@ import {
   THUMBNAIL_PRESETS,
 } from "@/lib/image-thumbnail";
 import type { Artwork } from "@/types/artwork";
+// STEP 131 Phase 2 Commit 2 — i18n helper 첫 production 호출처 wire.
+// STEP 130 Phase 2 Commit 1 (`01a1540`) 정착물 (`getTitle`, `getArtistName`) 의
+// 첫 사용. currentLocale 은 useArtworkStore (STEP 130 Commit 2 정착) 구독.
+//
+// **D-130-1 첫 wire 진입**:
+//   본 wire 가 `getTitle` 의 nullish (`??`) chain 을 production 표시 layer 에
+//   첫 노출. `titleI18n[locale] = ""` 빈 문자열 입력 케이스의 "공란 표시 vs
+//   다음 fallback" 의미 결정 보류 정합 — Form UI 미존재로 production 데이터
+//   발생 가능성 0, STEP 134 또는 별도 STEP 자연 재검토.
+import { getArtistName, getTitle } from "@/lib/i18n-helpers";
+import { useArtworkStore } from "@/store/useArtworkStore";
 
 // -----------------------------------------------------
 // PASSPORT-1 visual palette — inline arbitrary tailwind value
@@ -127,11 +138,30 @@ export function PassportCard({
   isSelected = false,
   onClick,
 }: PassportCardProps) {
-  // STEP 131 Phase 2 Commit 1 (Foundation):
-  //   artwork.title / artwork.artist.name direct access.
-  //   Commit 2 에서 getTitle/getArtistName helper 로 전환 (currentLocale 종속).
-  const displayTitle = artwork.title;
-  const displayArtist = artwork.artist.name;
+  // STEP 131 Phase 2 Commit 2 — i18n helper wire (첫 production 호출처).
+  //
+  // **STEP 130 정착물 첫 사용**:
+  //   - currentLocale 구독 (Commit 2 store 정착) — selector 단일 primitive,
+  //     re-render 영향 미미. 다른 사용처 (SidebarLocaleToggle) 와 같은
+  //     selector 다중 구독 시 Zustand 가 자동 dedup.
+  //   - getTitle/getArtistName (`01a1540` 정착, scenarios `8109d5e` 검증) —
+  //     fallback chain 통과로 현재 locale projection 또는 baseline (한국어
+  //     원문) 반환 보장.
+  //
+  // **D-130-1 첫 wire 진입**:
+  //   `getTitle` 의 nullish (`??`) chain 이 본 wire 로 production UI 진입.
+  //   빈 문자열 (`titleI18n.en = ""`) 입력 케이스 의미 결정 보류 정합 — Form
+  //   UI 미존재로 production 데이터 발생 가능성 0. STEP 134 또는 별도 STEP
+  //   자연 재검토 (사용자 §8 항목 5 결정).
+  //
+  // **D-130-2 정합**:
+  //   currentLocale 은 SidebarLocaleToggle 노출 locale (현 KO/EN 만, Hotfix
+  //   `631885d` 정착) 중 하나로만 set 됨. PassportCard 의 fallback chain 은
+  //   4-locale 모두 정합 — D-130-2 단기 복귀 (zh/ja 노출 회복) 시 본 wire
+  //   자동 흡수, 본 component 변경 0줄.
+  const currentLocale = useArtworkStore((s) => s.currentLocale);
+  const displayTitle = getTitle(artwork, currentLocale);
+  const displayArtist = getArtistName(artwork.artist, currentLocale);
 
   return (
     <button
