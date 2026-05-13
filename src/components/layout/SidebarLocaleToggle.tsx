@@ -68,11 +68,62 @@ import * as React from "react";
 import { useArtworkStore } from "@/store/useArtworkStore";
 import {
   type DocumentLocale,
+  // DOCUMENT_LOCALES — STEP 130 Phase 2 Hotfix (2026-05-13) 이후 직접 사용 0건.
+  // 향후 D-130-2 단기 복귀 시 본 import 를 `VISIBLE_LOCALES` 초기값으로 재사용
+  // 자연 진입점 (`= DOCUMENT_LOCALES` 또는 spread 패턴). 그 시점까지 inline
+  // reference 0건이라도 *복귀 path 시각화* 목적의 명시적 import 유지.
   DOCUMENT_LOCALES,
   DOCUMENT_LOCALE_LABEL_FULL,
   DOCUMENT_LOCALE_LABEL_SHORT,
 } from "@/lib/document-locale";
 import { cn } from "@/lib/utils";
+
+// -----------------------------------------------------
+// Visible locale subset (STEP 130 Phase 2 Hotfix)
+// -----------------------------------------------------
+
+/**
+ * **현재 UI 노출 locale** — 일시 제한 (사용자 요청 2026-05-13).
+ *
+ * 본 상수만 `SidebarLocaleToggle` 의 버튼 렌더 진입점. `DocumentLocale` 타입 /
+ * `DOCUMENT_LOCALES` 배열 / i18n-helpers fallback chain / Translation Layer
+ * (STEP 96) 모두 4-locale (ko/en/ja/zh) 그대로 유지 — 본 제한은 **표시 layer
+ * 단독**.
+ *
+ * **rule_1 (Physical Root Key) 정합**:
+ *   데이터는 항상 4 locale 모두 입력 가능 (artwork.titleI18n / artist.nameI18n
+ *   슬롯 무변경, fallback chain 무변경). 운영자가 다국어 데이터 입력 시점
+ *   (STEP 131+ Form UI 신설 영역) 에는 4 locale 모두 입력 옵션 유지.
+ *
+ * **Deferred Item D-130-2** — Future locale expansion roadmap:
+ *
+ *   단기 (UI 노출 복귀 가능): "zh", "ja"
+ *   - 사유: 사용자 요청 2026-05-13 — 당분간 KO/EN 만 노출, ZH/JA 코드 보존
+ *   - 복귀 방식: 본 배열에 항목 추가, 또는 `VISIBLE_LOCALES = DOCUMENT_LOCALES`
+ *     직접 할당. **`DocumentLocale` 타입 + STEP 96 0줄 변경**. 1줄 hotfix.
+ *
+ *   중기 (코드 신규 추가 필요): "fr", "it", "es"
+ *   - 사유: AXVELA 글로벌 아트 시장 운영 인프라 목표 정합
+ *   - 추가 방식 (5 step):
+ *     1. `src/lib/ai/types.ts` 의 `AILocale` 타입에 항목 추가
+ *        (`"fr" | "it" | "es"`)
+ *     2. `AI_LOCALES` 배열에 항목 추가 (4 → 7 locale)
+ *     3. `AI_LOCALE_LABEL_KR` 라벨 추가 ("프랑스어" / "이탈리아어" / "스페인어")
+ *     4. `DOCUMENT_LOCALE_LABEL_SHORT` 라벨 추가 (예: "FR" / "IT" / "ES")
+ *     5. native name 옵션 (Français / Italiano / Español) — 별도 helper
+ *        구조 결정 영역
+ *   - STEP 96 Translation Layer 정합 유지 — 본 toggle 외 다른 사용처
+ *     (`TranslationLocaleSelector` 7 surface) 도 자동 흡수
+ *
+ *   재검토 시점: **STEP 134 (AI Cultural Intelligence)** 또는 별도 locale
+ *   expansion STEP. 그 시점 진입 시 본 JSDoc 항목 갱신 + commit history 추적
+ *   진입점.
+ *
+ * **convention 답습**: STEP 130 Phase 2 Commit 1b 의 D-130-1 영구 기록 패턴
+ * (i18n-helpers.scenarios.ts JSDoc 헤더) 답습. 호출처 내부 정착 vs 별도
+ * docs/steps/ 정착 의도적 분리 — UI 표시 layer 의 *변경 즉각 가시성* 우선.
+ */
+const VISIBLE_LOCALES: readonly DocumentLocale[] = ["ko", "en"];
 
 // -----------------------------------------------------
 // Component
@@ -86,6 +137,10 @@ import { cn } from "@/lib/utils";
  * **호출처**: `src/components/layout/Sidebar.tsx` 내 1곳 (header 영역 직하 행).
  * **호출처 다중화 금지** — Sidebar header 외 다른 곳 사용 시 currentLocale UI
  * 표시 불일치 발생 가능 (단일 진실 원천 위반).
+ *
+ * **STEP 130 Phase 2 Hotfix (2026-05-13)**: 노출 locale 일시 제한.
+ * 본 컴포넌트는 `VISIBLE_LOCALES` (module-level const 위 정착) 만 렌더 —
+ * 4-locale 전체 노출 → KO/EN 만 노출. Deferred Item D-130-2 reference 참조.
  */
 export function SidebarLocaleToggle() {
   const currentLocale = useArtworkStore((s) => s.currentLocale);
@@ -97,7 +152,7 @@ export function SidebarLocaleToggle() {
       aria-label="작품 표시 언어 (artwork display locale)"
       className="flex items-center gap-0.5"
     >
-      {DOCUMENT_LOCALES.map((locale) => {
+      {VISIBLE_LOCALES.map((locale) => {
         const isActive = locale === currentLocale;
         return (
           <button
