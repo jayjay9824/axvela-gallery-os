@@ -15,6 +15,7 @@ import { SearchBar } from "@/components/artwork/SearchBar";
 import { Button } from "@/components/ui/Button";
 import { useArtworkStore } from "@/store/useArtworkStore";
 import { MobilePassportStack } from "@/components/mobile/MobilePassportStack";
+import { PassportUnfoldView } from "@/components/mobile/PassportUnfoldView";
 
 export function ArtworkGrid() {
   const artworks = useArtworkStore((s) => s.artworks);
@@ -29,7 +30,10 @@ export function ArtworkGrid() {
   // 초기화. 사용자 §8 항목 6 결정 정합.
   const viewMode = useArtworkStore((s) => s.viewMode);
   const setViewMode = useArtworkStore((s) => s.setViewMode);
-
+// STEP 131.5 Phase 2 Commit 4 — selectedArtwork 객체 조회 (PassportUnfoldView wire).
+  // store 에는 selectedArtworkId (string | null) 만 저장 → artworks 배열에서 find.
+  // DetailPanel 패턴 정합 (artworks + selectedArtworkId 별도 구독 후 컴포넌트 내 join).
+  const selectedArtwork = artworks.find((a) => a.id === selectedArtworkId);
   const filtered = useMemo(() => {
     return artworks.filter((a) => {
       if (stateFilter !== "ALL" && a.state !== stateFilter) return false;
@@ -143,6 +147,22 @@ export function ArtworkGrid() {
                 ),
               )}
             </div>
+            {/* STEP 131.5 Phase 2 Commit 4 — Mobile PassportUnfoldView wire.
+                §11 (c) 결정 (Foundation 신설만, In-Passport Navigation STEP 133 이월):
+                Mobile 에서 PassportCard tap → MobilePassportStack.onCardTap →
+                ArtworkGrid 의 select(a.id) → selectedArtworkId 세팅 → 본 분기 진입
+                → full-screen PassportUnfoldView 등장 (PASSPORT-1 spec §4 정합).
+                swipe-down close (PassportUnfoldView 내부 @use-gesture/react 처리)
+                → onClose 호출 → select(null) → 본 분기 사라짐.
+                Desktop ≥769px 무손상 (md:hidden 분기) — 기존 DetailPanel 패턴 보존. */}
+            {viewMode === "passport" && selectedArtwork && (
+              <div className="md:hidden">
+                <PassportUnfoldView
+                  artwork={selectedArtwork}
+                  onClose={() => select(null)}
+                />
+              </div>
+            )}
           </>
         ) : (
           <EmptyState onCreate={openCreate} />
