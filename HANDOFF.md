@@ -12,8 +12,10 @@
 ```
 Build:          ✅ green (npx next build, tsc --noEmit, next lint, 93/93 scenarios PASS)
 Route:          195 kB / 282 kB First Load JS  (STEP 129 +4 kB from STEP 128 — 2 PrintView + 5 helpers + 4-layer guard 자연 비용, ±10 kB tolerance 내)
-Last STEP:      STEP 129 (Invoice/Contract Write Flow + 4-layer Defense in Depth) ✅
-Latest ZIP:     axvela-step129-invoice-contract-flow.zip
+Last STEP:      STEP 132.6 (AI Activate + frozen §8 Exception, Box 18 종결, Box 19 진행 중) ✅
+Latest commit:  b4d6634 (docs(handoff): §10.3 Box 14.2 entry)
+Latest ZIP:     AXVELA_STEP_132_6_BOX_18_b4d6634.zip
+Active branch:  claude/step127-architecture-review
 Phase 1 Fiscal: ✅ 6/6 frozen (foundation freeze)
 Phase 3 Intel:  ✅ 5/8 (STEP 92~96)
 Phase 4 WF:     🟡 8/N (STEP 113~119 + 124~128 — Stage 1 ✅ / Stage 2 ✅ / Stage 3 진행 중)
@@ -43,8 +45,18 @@ UX track:       ✅ 3/3 완성
 20. STEP 115             Contact Structure Foundation (Phase 4 3/10)
 21. STEP 119             Curation Connected Data (Phase 4 4/10, 🎉 Stage 1 완성)
 22. STEP 116             Image-First Registration Hero (Phase 4 5/10, Stage 2 entry)
-23. STEP 118             Registration Tabs Structure ⭐ 방금
+23. STEP 118             Registration Tabs Structure
                          (4-tab + STEP 119 functional 진입, Stage 2 2/3, +1 kB, 5 신규 scenarios)
+24. STEP 130             Internationalization Layer (Optional Slice 10회째)
+                         2026-05-13, Phase 1 + Phase 2 (4 commit + Hotfix). titleI18n? / nameI18n? optional slot + getTitle/getArtistName helpers + currentLocale store + Sidebar locale toggle (KO+EN UI 노출 한정)
+25. STEP 131             Closed Passport Card + List View
+                         2026-05-13, Phase 1 + Phase 2 (4 commit). PassportCard.tsx (Closed Passport visual, PASSPORT-1 spec) + ViewModeToggle.tsx (grid ↔ passport) + viewMode store slice + Vision Record (사용자 AI 비전 5 항목 영구 정착)
+26. STEP 131.5           Multi-Surface (Mobile + Passport Redesign)
+                         2026-05-13~14, Phase 1 + Phase 2 (5 commit). MobilePassportStack + PassportUnfoldView + MobileBlockNotice + @use-gesture/react 의존성 추가 + ArtworkGrid 반응형 wire
+27. STEP 132             Server-side PDF (Invoice/Contract)
+                         2026-05-15, Phase 2 (3 commit). @react-pdf/renderer@4.5.1 + Pretendard 5.14MB + src/lib/pdf/ 3 모듈 + InvoicePDFDocument + ContractPDFDocument + 2 API routes + Drawer 다운로드 버튼
+28. STEP 132.6           AI Activate + frozen §8 Exception ⭐ 진행 중
+                         2026-05-15, 4 commit (Box 13~18). claude-sonnet-4-6 라이브 시연 4회 연속 200 OK + frozen §8 AI Provider 예외 §10.3 영구 정착 + .env.example AI 섹션 + AI_DEFAULTS.topP undefined
 ```
 
 ---
@@ -186,6 +198,61 @@ Phase 4 마감 후 권장.
   AXVELA_DEV_CONVENTION.md
   AXVELA_AI_INTEGRATION.md
   AXVELA_WORKFLOW_ARCHITECTURE.md  ⭐ (STEP 113 신규)
+
+STEP 132.6 산출물:
+  src/lib/ai/providers/anthropic.ts                                       (+5 LOC, top_p conditional 분기 + destructuring default undefined, frozen §8 예외 — Box 11)
+  src/lib/ai/config.ts                                                    (+1 LOC, AI_DEFAULTS.topP: 0.9 → undefined, frozen §8 추가 예외 — Box 14.2)
+  .env.example                                                            (+14 LOC, AXVELA AI Integration 섹션 머지 — Box 4)
+  HANDOFF.md §10.3                                                        (정책 예외 적용 기록 신규 섹션 + Box 11 entry + Box 14.2 entry, frozen STEP 예외 영구 보존)
+  검증: ping v4 + v5 HTTP 200 / 라이브 시연 4회 연속 200 OK (claude-sonnet-4-6, Material 정규화)
+  Commit chain: d175b97 → c514748 → c19ecab → b4d6634
+
+STEP 132 산출물:
+  package.json                                                            (+1 dep, @react-pdf/renderer@4.5.1)
+  public/fonts/Pretendard-{Regular,Bold}.ttf                              (~5.14 MB, v1.3.9 alternative TTF for PDF compatibility)
+  src/lib/pdf/fonts.ts                                                    (~78 LOC, ensureFontsRegistered + PRETENDARD_FAMILY)
+  src/lib/pdf/styles.ts                                                   (~245 LOC, pdfColors / pdfTypography / pdfSpacing / commonPDFStyles)
+  src/lib/pdf/client.ts                                                   (downloadInvoicePDF + downloadContractPDF, Result 패턴)
+  src/components/invoice/InvoicePDFDocument.tsx                           (~303 LOC, PRE/FINAL 분기, i18n helper)
+  src/components/contract/ContractPDFDocument.tsx                         (~160 LOC, content free-form 영역)
+  src/app/api/pdf/invoice/[id]/route.tsx                                  (~182 LOC, rule_4 guard isLocked === true)
+  src/app/api/pdf/contract/[id]/route.tsx                                 (~145 LOC, status === "LOCKED" guard)
+  src/components/invoice/InvoiceDetailDrawer.tsx                          (PDF 다운로드 버튼 wire)
+  src/components/contract/ContractDetailDrawer.tsx                        (PDF 다운로드 버튼 wire, isLocked 한정)
+  STEP_132_PHASE_2_COMPLETE.md                                            (프로젝트 루트, ~110 LOC)
+  Commit chain: 457821f → aed3a80 → b8c0ec9
+
+STEP 131.5 산출물:
+  package.json                                                            (+1 dep, @use-gesture/react)
+  src/components/mobile/MobilePassportStack.tsx                           (Closed Passport stack, mobile native swipe)
+  src/components/mobile/PassportUnfoldView.tsx                            (mobile-native unfolded passport)
+  src/components/mobile/MobileBlockNotice.tsx                             (mobile fallback notice)
+  src/components/mobile/MobileTopNav.tsx                                  (mobile top navigation)
+  src/components/layout/ArtworkGrid.tsx                                   (반응형 wire — MobilePassportStack vs DesktopGrid 분기)
+  src/components/layout/Sidebar.tsx                                       (mobile 차단 entry)
+  .eslintrc.json                                                          (env: { browser: true } 추가)
+  docs/steps/STEP_131_5_PHASE_2_COMPLETE.md
+  Commit chain: 669020d → ad90607 → e5a83e0 → 73b3d6a → 864f3ef → 1d9fab3 → 6422744 → 914eae3
+
+STEP 131 산출물:
+  src/components/artwork/PassportCard.tsx                                 (Closed Passport visual, PASSPORT-1 spec 정착)
+  src/components/artwork/ViewModeToggle.tsx                               (grid ↔ passport switch)
+  src/store/useArtworkStore.ts                                            (+ viewMode slice + setViewMode action)
+  src/components/layout/ArtworkGrid.tsx                                   (viewMode === "passport" 분기 — PassportCard 렌더)
+  docs/design/passport/PASSPORT-1.png + PASSPORT-1_SPEC.md                (디자인 자산 git add)
+  docs/steps/STEP_131_PHASE_2_COMPLETE.md
+  Vision Record: 사용자 AI 비전 5 항목 영구 정착 (commit 10b64ab)
+  Commit chain: ffe49f0 → 6754443 → 4006030 → 10b64ab → dddebfa
+
+STEP 130 산출물:
+  src/types/artwork.ts                                                    (+ Artwork.titleI18n? optional slot + Artist.nameI18n? optional slot, SCHEMA_VERSION "v1" 유지)
+  src/lib/i18n-helpers.ts                                                 (getTitle(artwork, locale) + getArtistName(artist, locale), fallback chain)
+  src/lib/document-locale.ts                                              (DocumentLocale 타입 + 4 locale union: ko/en/ja/zh)
+  src/store/useArtworkStore.ts                                            (+ currentLocale + setLocale slice)
+  src/components/layout/Sidebar.tsx                                       (header locale toggle, KO+EN 한정 UI 노출 — Hotfix)
+  src/lib/__tests__/i18n-helpers.scenarios.ts                             (8 scenarios)
+  docs/steps/STEP_130_PHASE_2_COMPLETE.md
+  Commit chain: f9b8b5f → 01a1540 → 8109d5e → 50ab862 → 8a8a667 → 5d10653 → 631885d (Hotfix)
 
 STEP 118 산출물:
   src/components/ui/TabBar.tsx                                          (~85 LOC, generic tab primitive)
