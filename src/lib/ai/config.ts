@@ -166,7 +166,8 @@ export const readAIApiKey = (
 
 export const AI_DEFAULTS = {
   temperature: 0.1,
-  topP: 0.9,
+  // 기본값 미전송 — 신모델 (4.6+) 은 temperature 와 동시 사용 거부, callAnthropic conditional 분기로 제어
+  topP: undefined,                // 박스 14.2 frozen §8 추가 예외 (STEP 132.6)
   maxTokens: 1000,
   timeoutMs: 30_000,
 } as const;
