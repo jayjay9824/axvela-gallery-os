@@ -12,9 +12,9 @@
 ```
 Build:          ✅ green (npx next build, tsc --noEmit, next lint, 93/93 scenarios PASS)
 Route:          195 kB / 282 kB First Load JS  (STEP 129 +4 kB from STEP 128 — 2 PrintView + 5 helpers + 4-layer guard 자연 비용, ±10 kB tolerance 내)
-Last STEP:      STEP 132.6 (AI Activate + frozen §8 Exception, Box 18 종결, Box 19 진행 중) ✅
-Latest commit:  b4d6634 (docs(handoff): §10.3 Box 14.2 entry)
-Latest ZIP:     AXVELA_STEP_132_6_BOX_18_b4d6634.zip
+Last STEP:      STEP 132.6 ✅ 봉인 (AI Activate + frozen §8 Exception) — tag step-132.6-closed
+Latest commit:  (Box 20 봉인 commit)
+Latest ZIP:     AXVELA_STEP_132_6_BOX_20_[봉인hash]_FINAL.zip
 Active branch:  claude/step127-architecture-review
 Phase 1 Fiscal: ✅ 6/6 frozen (foundation freeze)
 Phase 3 Intel:  ✅ 5/8 (STEP 92~96)
@@ -55,8 +55,8 @@ UX track:       ✅ 3/3 완성
                          2026-05-13~14, Phase 1 + Phase 2 (5 commit). MobilePassportStack + PassportUnfoldView + MobileBlockNotice + @use-gesture/react 의존성 추가 + ArtworkGrid 반응형 wire
 27. STEP 132             Server-side PDF (Invoice/Contract)
                          2026-05-15, Phase 2 (3 commit). @react-pdf/renderer@4.5.1 + Pretendard 5.14MB + src/lib/pdf/ 3 모듈 + InvoicePDFDocument + ContractPDFDocument + 2 API routes + Drawer 다운로드 버튼
-28. STEP 132.6           AI Activate + frozen §8 Exception ⭐ 진행 중
-                         2026-05-15, 4 commit (Box 13~18). claude-sonnet-4-6 라이브 시연 4회 연속 200 OK + frozen §8 AI Provider 예외 §10.3 영구 정착 + .env.example AI 섹션 + AI_DEFAULTS.topP undefined
+28. STEP 132.6           AI Activate + frozen §8 Exception ✅ 봉인 (5 commit + COMPLETE doc + tag step-132.6-closed)
+                         2026-05-15~16, claude-sonnet-4-6 라이브 시연 4회 연속 200 OK + frozen §8 AI Provider 예외 §10.3 영구 정착 (Box 11 + Box 14.2) + .env.example AI 섹션 + AI_DEFAULTS.topP undefined + docs/steps/STEP_132_6_COMPLETE.md
 ```
 
 ---
