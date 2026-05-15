@@ -311,6 +311,38 @@ Stage 3 (Transaction Flow):         120 → 121 → 122 wrap
 
 ---
 
+### STEP 132.6 — Box 14.2: AI_DEFAULTS.topP 추가 예외 (route caller-side chain)
+
+- **적용 일시**: 2026-05-15
+- **STEP**: STEP 132.6 Box 14.2 — frozen §8 추가 예외 (route caller-side chain 정합화)
+- **위반 정책**: 14_PERMANENT_POLICIES.md §8 영구 정착 STEP 목록 — "AI Protocol — config.ts (AI_DEFAULTS 상수)" frozen
+- **수정 위치**: `src/lib/ai/config.ts`
+  - line 169: `AI_DEFAULTS.topP: 0.9` → `topP: undefined` + 주석 1줄
+  - 합계: 순 +1 LOC, `AI_DEFAULTS` 객체 shape 무변경 (`as const` 보존)
+- **위반 사유**: Box 11 의 `callAnthropic` conditional 패턴 fix 가 production AI 호출 path 에서 무력화됨. `route.ts:347` 의 `topP: AI_DEFAULTS.topP` 명시 전달 + `invoke.ts:76` 의 destructuring default `topP = AI_DEFAULTS.topP` 로 인해 caller chain (route → invoke → callAnthropic) 이 `top_p=0.9` 를 강제 전송 → `claude-sonnet-4-6` HTTP 400 invalid_request_error 재발 예상.
+- **위반 영향 분석**:
+  - 시스템 정체성: ❌ 0 (단순 default 상수 값 변경, AI 의도 / 4 역할 / fail-close 정책 무변경)
+  - 호출자 (caller) 영향: ❌ 0 (`AnthropicCallOptions.topP?: number` 와 `undefined` literal 호환)
+  - `AI_DEFAULTS` shape: ✅ 무변경 (`as const`, 4 fields 그대로)
+  - 함수 signature / export: ❌ 0 변경
+  - Backward Compatibility (§9.1): ✅ 100% 정합
+  - Build Green (§9.4): ✅ `npx tsc --noEmit` 0 errors
+- **승인 경로**: STEP 132.6 Box 14.1 정찰 발견 → Box 14.2 박진휘 분 명시 승인 (옵션 B — AI_DEFAULTS.topP 단일 fix)
+- **대안 검토 (각 옵션과 기각 사유)**:
+  - (A) `route.ts:347` + `invoke.ts:76` 두 곳 fix: 2 곳 추가 예외 필요, 동일 효과
+  - (B) `AI_DEFAULTS.topP = undefined` 단일 fix: ✅ 채택 — single source of truth, 가장 깨끗
+  - (C) 시연 우회 (ping 직접 호출): UI 시연 불가능
+  - (D) 보류: STEP 132.6 본 목표 (라이브 시연) 진입 불가
+- **검증 결과**:
+  - ping v5 (route caller-side chain 재현) — HTTP 200 + "PONG" ✅
+  - 라이브 시연 (Box 15.x) — `POST /api/ai-assist` 4회 연속 HTTP 200 OK ✅
+  - 응답 시간: 4~5 초 (Material 정규화 시연)
+  - **Commit reference: `c19ecab`**
+- **재발 방지**:
+  - `AI_DEFAULTS` 의 다른 필드도 신모델 정책 변경 시 동일 §10.3 절차 적용 (옵션 제시 → 박진휘 분 승인 → 영구 기록).
+
+---
+
 ### STEP 132.6 — frozen §8 "AI Provider" 예외 적용
 
 - **적용 일시**: 2026-05-15
