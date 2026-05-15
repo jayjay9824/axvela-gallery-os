@@ -21,6 +21,8 @@ import { ContractPrintView } from "./ContractPrintView";
 // Document Lifecycle Clarity STEP — parity with Invoice drawer (Timeline + Approval slot only)
 import { DocumentActivityTimeline } from "@/components/document-lifecycle/DocumentActivityTimeline";
 import { ApprovalSlotPlaceholder } from "@/components/document-lifecycle/ApprovalSlotPlaceholder";
+// STEP 132 Phase 2 Commit 2 — Server-side PDF download helper
+import { downloadContractPDF } from "@/lib/pdf/client";
 
 // ============================================================================
 // Drawer wrapper
@@ -274,6 +276,28 @@ function ReadOnlyContractView({
       window.setTimeout(() => window.print(), 50);
     }
   };
+
+  // STEP 132 Phase 2 Commit 2 — Server-side PDF 다운로드 (LOCKED 한정).
+  // rule_4 가드는 server route 에서 contract.status === "LOCKED" 검증.
+  const [isDownloadingPDF, setIsDownloadingPDF] = React.useState(false);
+  const handleDownloadPDF = async () => {
+    if (isDownloadingPDF) return;
+    setIsDownloadingPDF(true);
+    try {
+      const result = await downloadContractPDF({
+        contract,
+        artwork,
+        transaction,
+        locale: "ko",
+      });
+      if (!result.ok) {
+        alert(`PDF 다운로드 실패: ${result.error}`);
+      }
+    } finally {
+      setIsDownloadingPDF(false);
+    }
+  };
+
   const handleNewVersion = () => createContractVersion(contract.id);
 
   return (
@@ -419,6 +443,18 @@ function ReadOnlyContractView({
         {isLocked && (
           <Button type="button" variant="ghost" onClick={handlePrint}>
             인쇄 / PDF 저장
+          </Button>
+        )}
+        {/* STEP 132 Phase 2 Commit 2 — Server-side PDF 다운로드 (LOCKED 한정) */}
+        {isLocked && (
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={handleDownloadPDF}
+            disabled={isDownloadingPDF}
+            aria-disabled={isDownloadingPDF}
+          >
+            {isDownloadingPDF ? "다운로드 중..." : "PDF 다운로드"}
           </Button>
         )}
         {isLocked && (

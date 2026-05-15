@@ -26,6 +26,7 @@
 import type { Invoice } from "@/types/invoice";
 import type { Artwork } from "@/types/artwork";
 import type { Transaction } from "@/types/transaction";
+import type { Contract } from "@/types/contract";
 import type { DocumentLocale } from "@/lib/document-locale";
 
 export interface DownloadInvoicePDFInput {
@@ -133,4 +134,97 @@ function triggerDownload(blob: Blob, filename: string): void {
   a.click();
   document.body.removeChild(a);
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+export interface DownloadContractPDFInput {
+  contract: Contract;
+  artwork: Artwork | null;
+  transaction: Transaction | null;
+  locale: DocumentLocale;
+  galleryName?: string;
+}
+
+export type DownloadContractPDFResult =
+  | { ok: true }
+  | { ok: false; error: string; status?: number };
+
+/**
+ * Contract PDF 를 server-side 에서 생성 + 즉시 다운로드 trigger.
+ *
+ * **흐름**: fetch → blob → <a download> click → revokeObjectURL.
+ *
+ * **rule_4 정합**: server route 가 contract.status === "LOCKED" 가드.
+ * DRAFT / REVIEW / APPROVED 시 403 응답 → 본 helper 가
+ * `{ ok: false, error, status: 403 }` 반환.
+ *
+ * @example
+ *   const result = await downloadContractPDF({
+ *     contract, artwork, transaction, locale: "ko",
+ *   });
+ *   if (!result.ok) {
+ *     console.error(result.error);
+ *     // toast.error(result.error);
+ *   }
+ */
+export async function downloadContractPDF(
+  input: DownloadContractPDFInput,
+): Promise<DownloadContractPDFResult> {
+  const { contract, artwork, transaction, locale, galleryName } = input;
+
+  // 1. fetch POST
+  let response: Response;
+  try {
+    response = await fetch(`/api/pdf/contract/${contract.id}`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contract,
+        artwork,
+        transaction,
+        locale,
+        galleryName,
+      }),
+    });
+  } catch (err) {
+    return {
+      ok: false,
+      error:
+        err instanceof Error
+          ? `네트워크 오류: ${err.message}`
+          : "네트워크 오류 (오프라인 또는 API route 접근 불가).",
+    };
+  }
+
+  // 2. HTTP 상태 검증 — server JSON error 추출 시도
+  if (!response.ok) {
+    let serverError = `PDF 생성 실패 (HTTP ${response.status}).`;
+    try {
+      const json = (await response.json()) as { error?: unknown };
+      if (typeof json.error === "string") serverError = json.error;
+    } catch {
+      // JSON parse 실패 — fallback message 유지
+    }
+    return { ok: false, error: serverError, status: response.status };
+  }
+
+  // 3. blob 읽기
+  let blob: Blob;
+  try {
+    blob = await response.blob();
+  } catch (err) {
+    return {
+      ok: false,
+      error:
+        err instanceof Error
+          ? `PDF blob 읽기 실패: ${err.message}`
+          : "PDF blob 읽기 실패.",
+    };
+  }
+
+  // 4. 다운로드 trigger (server-side filename 헤더와 일관)
+  const shortId = contract.id.slice(-8).toUpperCase();
+  const filename = `contract-${shortId}.pdf`;
+  triggerDownload(blob, filename);
+
+  return { ok: true };
 }
