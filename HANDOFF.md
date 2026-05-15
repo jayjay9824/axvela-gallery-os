@@ -13,8 +13,8 @@
 Build:          ✅ green (npx next build, tsc --noEmit, next lint, 93/93 scenarios PASS)
 Route:          195 kB / 282 kB First Load JS  (STEP 129 +4 kB from STEP 128 — 2 PrintView + 5 helpers + 4-layer guard 자연 비용, ±10 kB tolerance 내)
 Last STEP:      STEP 132.6 ✅ 봉인 (AI Activate + frozen §8 Exception) — tag step-132.6-closed
-Latest commit:  (Box 20 봉인 commit)
-Latest ZIP:     AXVELA_STEP_132_6_BOX_20_[봉인hash]_FINAL.zip
+Latest commit:  826f288 (Box 20 봉인 commit — tag step-132.6-closed)
+Latest ZIP:     AXVELA_STEP_132_6_BOX_20_826f288_FINAL.zip
 Active branch:  claude/step127-architecture-review
 Phase 1 Fiscal: ✅ 6/6 frozen (foundation freeze)
 Phase 3 Intel:  ✅ 5/8 (STEP 92~96)

@@ -1,7 +1,7 @@
 # STEP 132.6 — AI Activate + frozen §8 Exception (COMPLETE)
 
 > **봉인 일자**: 2026-05-16
-> **봉인 commit**: (Box 20)
+> **봉인 commit**: `826f288` (Box 20)
 > **봉인 tag**: `step-132.6-closed`
 > **선행 baseline**: `b8c0ec9` (STEP 132 Phase 2 Closure)
 
@@ -28,7 +28,7 @@ STEP 132 Phase 2 (Server-side PDF Invoice/Contract) 직후 진입한 single-phas
 | **`c19ecab`** | Box 17 | `src/lib/ai/config.ts` | `AI_DEFAULTS.topP: 0.9 → undefined` (route caller-side chain 정합) |
 | **`b4d6634`** | Box 18 | `HANDOFF.md §10.3` | Box 14.2 AI_DEFAULTS.topP exception entry 추가 (시간순 역순 배치) |
 | **`ec6d7e4`** | Box 19 | `HANDOFF.md` (3 영역) | STEP 130/131/131.5/132/132.6 일괄 정합화 (현재 상태 + 진행 흐름 + 산출물) |
-| (Box 20 commit) | Box 20 | `docs/steps/STEP_132_6_COMPLETE.md` + `HANDOFF.md` | 본 COMPLETE doc + HANDOFF 봉인 갱신 |
+| **`826f288`** | Box 20 | `docs/steps/STEP_132_6_COMPLETE.md` + `HANDOFF.md` | 본 COMPLETE doc + HANDOFF 봉인 갱신 |
 
 ## d) Box 진행 기록
 
@@ -113,7 +113,7 @@ STEP 132 Phase 2 (Server-side PDF Invoice/Contract) 직후 진입한 single-phas
 | 14.2 | `AXVELA_STEP_132_6_BOX_14_2_c19ecab.zip` | `~/Downloads/` | Box 17 |
 | 18 | `AXVELA_STEP_132_6_BOX_18_b4d6634.zip` | `~/Downloads/` | Box 18 |
 | 19 | `AXVELA_STEP_132_6_BOX_19_ec6d7e4.zip` | `~/Downloads/` | Box 19 |
-| **20 (FINAL)** | **`AXVELA_STEP_132_6_BOX_20_[봉인hash]_FINAL.zip`** | `~/Downloads/` | Box 20 (본 봉인) |
+| **20 (FINAL)** | **`AXVELA_STEP_132_6_BOX_20_826f288_FINAL.zip`** | `~/Downloads/` | Box 20 (본 봉인) |
 
 ### 4-Layer 완비 검증
 
