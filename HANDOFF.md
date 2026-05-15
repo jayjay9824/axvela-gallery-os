@@ -304,4 +304,48 @@ Stage 3 (Transaction Flow):         120 → 121 → 122 wrap
 
 ---
 
+## 🚨 정책 예외 적용 기록
+
+> 14_PERMANENT_POLICIES.md §10.3 정합 — frozen STEP 또는 영구 정책에 대한 명시 승인 예외를 영구 보존하는 영역.
+> 새 예외는 본 섹션 상단에 시간순 역순으로 추가 (가장 최신이 위).
+
+---
+
+### STEP 132.6 — frozen §8 "AI Provider" 예외 적용
+
+- **적용 일시**: 2026-05-15
+- **STEP**: STEP 132.6 AI-ACTIVATE-1
+- **위반 정책**: 14_PERMANENT_POLICIES.md §8 영구 정착 STEP 목록 — "AI Provider — anthropic.ts / invoke.ts / 4-step guard" frozen
+- **수정 위치**: `src/lib/ai/providers/anthropic.ts`
+  - line 101-103: destructuring default `topP = 0.9` → `topP = undefined` + 주석 1줄
+  - line 110-126: request body 를 const 분리 + `if (topP !== undefined && topP !== null)` conditional 분기 (5 LOC 추가)
+  - line 137: `body: JSON.stringify(requestBody)` 변수 참조로 전환
+  - 합계: 순 +5 LOC, 함수 외부 영향 0
+- **위반 사유**: Anthropic Messages API 가 신모델 (claude-sonnet-4-6+) 부터 `temperature` 와 `top_p` 동시 전송 거부 (HTTP 400 invalid_request_error). AI Provider STEP frozen 시점의 정책과 Anthropic API 현행 정책 불일치. STEP 132.6 의 AI 활성화 검증 (ping PONG) 진입 불가 상태.
+- **위반 영향 분석**:
+  - 시스템 정체성: ❌ 0 (단순 API 정합성 fix, 4 역할 / 4 단계 파이프라인 / fail-close 정책 모두 무변경)
+  - 호출자 (caller) 영향: ❌ 0 (AnthropicCallOptions.topP 가 이미 `?: number` optional, 기존 호출자 무손상)
+  - 함수 signature / export: ❌ 0 변경
+  - 함수 외부 동작 (성공/실패 path): ❌ 0 변경
+  - Backward Compatibility (§9.1): ✅ 100% 정합
+  - Build Green (§9.4): ✅ `npx tsc --noEmit` 0 errors
+- **승인 경로**: STEP 132.6 박스 11 — 박진휘 분 명시 승인 (옵션 2 — conditional 패턴, ~5줄 backward-compatible fix)
+- **대안 검토 (각 옵션과 기각 사유)**:
+  - (A) `top_p` 단순 제거 (1줄): backward compatibility 깨짐 — 구모델에서 top_p 사용 caller 무력화
+  - (B) `temperature` 제거: 결정성 손실, 큐레이션 일관성 저하
+  - (C) conditional 패턴 (~5줄): ✅ 채택 — 신/구 모델 양립
+  - (D) 보존 + 이월: STEP 132.6 본 목표 (라이브 시연) 진입 불가
+- **검증 결과**:
+  - ping v4 — HTTP 200 ✅
+  - response text "PONG" 정확 수신 ✅
+  - usage tokens 31 in / 6 out ✅
+  - elapsed 1,313ms ✅
+  - 5/5 검증 포인트 통과
+- **잔존 정책 부채 (후속 STEP 권장)**:
+  - `src/lib/ai/config.ts:43` DEFAULT_MODELS.anthropic = "claude-sonnet-4-7" 부정확 (실재 모델 부재) — 현재 .env.local 의 AXVELA_AI_MODEL override 로 우회. config 정합화는 별도 STEP 132.7 "AI default model alignment" 로 분리 권장.
+- **재발 방지**:
+  - Anthropic API 정책 변경 detect 시 (예: 다른 frozen 영역에서 4xx) 동일 §10.3 절차 (옵션 제시 → 박진휘 분 승인 → 영구 기록) 반복.
+
+---
+
 새 채팅에서 만나요 🙂

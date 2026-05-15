@@ -99,13 +99,31 @@ export const callAnthropic = async (
     apiKey,
     model,
     temperature = 0.1,
-    topP = 0.9,
+    // 기본값 미전송 — 신모델 (4.6+) 은 temperature 와 동시 사용 거부, conditional 분기로 제어
+    topP = undefined,
     maxTokens = 1000,
     timeoutMs = 30000,
   } = options;
 
   const controller = new AbortController();
   const timeoutHandle = setTimeout(() => controller.abort(), timeoutMs);
+
+  const requestBody: Record<string, unknown> = {
+    model,
+    max_tokens: maxTokens,
+    temperature,
+    system: promptBundle.system,
+    messages: [
+      {
+        role: "user",
+        content: promptBundle.user,
+      },
+    ],
+  };
+  // top_p 는 caller 가 명시한 경우에만 전송 (Anthropic 신모델 4.6+ 은 temperature 와 동시 사용 거부)
+  if (topP !== undefined && topP !== null) {
+    requestBody.top_p = topP;
+  }
 
   let response: Response;
   try {
@@ -116,19 +134,7 @@ export const callAnthropic = async (
         "x-api-key": apiKey,
         "anthropic-version": ANTHROPIC_API_VERSION,
       },
-      body: JSON.stringify({
-        model,
-        max_tokens: maxTokens,
-        temperature,
-        top_p: topP,
-        system: promptBundle.system,
-        messages: [
-          {
-            role: "user",
-            content: promptBundle.user,
-          },
-        ],
-      }),
+      body: JSON.stringify(requestBody),
       signal: controller.signal,
     });
   } catch (err) {
