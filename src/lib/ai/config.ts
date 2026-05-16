@@ -40,7 +40,7 @@ const ENV_AI_KIND_FLAG: Record<AIAssistKind, string> = {
 // -----------------------------------------------------
 
 export const DEFAULT_MODELS: Record<AIProvider, string> = {
-  anthropic: "claude-sonnet-4-7",
+  anthropic: "claude-sonnet-4-6",
   openai: "gpt-4-turbo",
   gemini: "gemini-1.5-pro",
 };

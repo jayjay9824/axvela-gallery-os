@@ -378,6 +378,46 @@ Stage 3 (Transaction Flow):         120 → 121 → 122 wrap
 
 ---
 
+### STEP 132.7 — Box B: AI Default Model Alignment (config.ts:43 + scenarios fixture + .env.local)
+
+- **적용 일시**: 2026-05-16
+- **STEP**: STEP 132.7 — AI Default Model Alignment (frozen §8 audit-safe 정정)
+- **위반 정책**: 14_PERMANENT_POLICIES.md §8 영구 정착 STEP 목록 — "AI Protocol — config.ts (AI_DEFAULTS / DEFAULT_MODELS 상수)" + "AI Provider — anthropic.ts / invoke.ts / 4-step guard" frozen
+- **수정 위치** (3 영역, 단일 STEP):
+  - `src/lib/ai/config.ts:43` — `DEFAULT_MODELS.anthropic: "claude-sonnet-4-7"` → `"claude-sonnet-4-6"` (1 LOC, single source of truth 회복)
+  - `src/lib/__tests__/anthropic-provider.scenarios.ts` — fixture 모델명 7곳 정정 (5 bare L112/280/308/396/403 + 2 dated suffix L139/158, `replace_all` 한 번 적용 — L139 mock response model + L158 assertion echo paired test 유지)
+  - `.env.local` — `AXVELA_AI_MODEL=claude-sonnet-4-6` override 줄 1개 삭제 (3 env var `AXVELA_AI_ENABLED` / `PROVIDER` / `API_KEY` 보존, gitignored)
+- **합계**: tracked 2 files / +8 / -8 LOC + `.env.local` 1줄 삭제
+- **위반 사유**: STEP 132.6 봉인 시점 잔존 부채 명시 (HANDOFF.md L443-444 / `STEP_132_6_COMPLETE.md` §h). `claude-sonnet-4-7` 은 실재 Anthropic 모델 부재 → `DEFAULT_MODELS` fallback 경로 진입 시 404 not_found_error (Box 6 ping v1 재현됨). `.env.local` `AXVELA_AI_MODEL` override 로 우회 중이었으나 single source of truth 위반 + 신환경 (CI / 신규 개발자 / staging) 진입 시 즉시 fail risk. scenarios fixture 7곳도 동일 부정확값 hit 상태 → audit confusion risk.
+- **위반 영향 분석**:
+  - 시스템 정체성 (AI 의도 / 4 역할 / fail-close 정책): ❌ 0 변경 (단순 문자열 정정)
+  - 함수 signature / export / 타입 정의: ❌ 0 변경
+  - `DEFAULT_MODELS` 객체 shape (3 keys: anthropic / openai / gemini): ❌ 0 변경 (anthropic value 1개만 정정)
+  - `AI_DEFAULTS` 객체 (STEP 132.6 Box 14.2 정착물): ❌ 0 변경
+  - Backward Compatibility (§9.1): ✅ 100% 정합 (`InvokeProviderOptions.model?` override path 보존, 호출자 명시 전달 시 우선)
+  - Build Green (§9.4): ✅ `npx tsc --noEmit` 0 errors / `npm run lint` 0 / `npm run build` 7/7 static pages / `runAllScenarios()` 9/9 passed
+  - 라이브 API: ✅ HTTP 200, model="claude-sonnet-4-6" echo, tokens=31 (Box D)
+- **승인 경로**: STEP 132.7 Box A 정찰 → Box A+ 추가 정찰 (scenarios.ts mock fixture + frozen §8 명시 부재 확인) → Box B 박진휘 분 명시 승인 (옵션 A — 9곳 전부 정정) → Box B1 sub-옵션 승인 (`replace_all` 한 번으로 7곳 통일, dated suffix paired test 짝 유지)
+- **대안 검토 (각 옵션과 기각 사유)**:
+  - (A) 9곳 전부 정정 (config + scenarios 7 + .env.local): ✅ 채택 — single source of truth 완전 회복, audit-safe.
+  - (B) 2곳만 (config + .env.local), scenarios fixture 보존: 검토 시 fixture 부정확값 hit → audit confusion, 기각.
+  - (C) `.env.local` override 유지 + config 만 정정: env 의존 영구화, single source of truth 미회복, 기각.
+  - (D) 보류 — 별도 STEP 132.8 로 이월: 잔존 부채 누적, STEP 132.8 (Image-First Curation Auto-Fill) 진입 시 모델명 drift risk, 기각.
+- **검증 결과**:
+  - Box C 1번 — `npx tsc --noEmit` 0 errors ✅
+  - Box C 2번 — `npm run lint` (next lint) "No ESLint warnings or errors" ✅
+  - Box C 3번 — `npm run build` (next build) Next.js 14.2.15 Compiled successfully, 7/7 static pages, 8 routes ✅
+  - Box C 4번 — `runAllScenarios()` via `npx tsx -e` dynamic import: `{ summary: "9/9 passed", passed: 9, failed: 0 }` ✅
+  - Box D — 라이브 Anthropic API 호출 1회 (`invokeProvider` + DEFAULT_MODELS fallback 경로): `ok: true / text: '{"ok":true}' / model: "claude-sonnet-4-6" / tokens: { input: 23, output: 8 }` ✅
+  - 부정확값 잔존 — `findstr /S /N "claude-sonnet-4-7" src` → 0 hits ✅
+  - **Commit reference**: `TBD` (Box F 봉인 후 갱신)
+- **재발 방지**:
+  - `DEFAULT_MODELS` / `.env.local` 모델명 정합 유지 — 신모델 등장 / deprecation 시 동일 §10.3 절차 (옵션 제시 → 박진휘 분 승인 → 영구 기록) 반복.
+  - scenarios fixture 모델명 = `DEFAULT_MODELS` 와 동기화 유지. drift detect 시 별도 alignment STEP 분리.
+  - STEP 132.6 잔존 부채 (HANDOFF L443-444) 본 STEP 으로 해소 — 후속 STEP 132.8 진입 시 모델명 drift risk 0.
+
+---
+
 ### STEP 132.6 — Box 14.2: AI_DEFAULTS.topP 추가 예외 (route caller-side chain)
 
 - **적용 일시**: 2026-05-15

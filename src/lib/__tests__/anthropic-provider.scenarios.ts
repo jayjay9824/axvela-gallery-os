@@ -109,7 +109,7 @@ const fxPromptBundle: AIPromptBundle = {
 
 const fxOptions = {
   apiKey: "sk-ant-test-key",
-  model: "claude-sonnet-4-7",
+  model: "claude-sonnet-4-6",
   temperature: 0.1,
   topP: 0.9,
   maxTokens: 1000,
@@ -136,7 +136,7 @@ SCENARIOS.push(async () => {
       id: "msg_test_01",
       type: "message",
       role: "assistant",
-      model: "claude-sonnet-4-7-20251001",
+      model: "claude-sonnet-4-6-20251001",
       content: [
         {
           type: "text",
@@ -155,7 +155,7 @@ SCENARIOS.push(async () => {
         result.text.includes("Oil on Canvas"),
         "text should contain Oil on Canvas",
       );
-      assertEqual(result.model, "claude-sonnet-4-7-20251001", "model");
+      assertEqual(result.model, "claude-sonnet-4-6-20251001", "model");
       assertTrue(result.tokens?.input === 50, "tokens.input should be 50");
       assertTrue(result.tokens?.output === 30, "tokens.output should be 30");
     }
@@ -277,7 +277,7 @@ SCENARIOS.push(async () => {
     buildSuccessResponse({
       id: "msg_test_05",
       type: "message",
-      model: "claude-sonnet-4-7",
+      model: "claude-sonnet-4-6",
       content: [],
     }),
   );
@@ -305,7 +305,7 @@ SCENARIOS.push(async () => {
   const spy = installFetchMock(async () =>
     buildSuccessResponse({
       content: [{ type: "text", text: '{"normalizationNotes":[]}' }],
-      model: "claude-sonnet-4-7",
+      model: "claude-sonnet-4-6",
     }),
   );
   try {
@@ -393,14 +393,14 @@ SCENARIOS.push(async () => {
     }
     return buildSuccessResponse({
       content: [{ type: "text", text: '{"normalizationNotes":[]}' }],
-      model: "claude-sonnet-4-7",
+      model: "claude-sonnet-4-6",
     });
   });
   try {
     await callAnthropic(fxPromptBundle, fxOptions);
     assertTrue(captured !== undefined, "body captured");
     const body = captured as Record<string, unknown>;
-    assertEqual(body.model, "claude-sonnet-4-7", "body.model");
+    assertEqual(body.model, "claude-sonnet-4-6", "body.model");
     assertEqual(body.max_tokens, 1000, "body.max_tokens");
     assertTrue(typeof body.system === "string", "body.system");
     assertTrue(Array.isArray(body.messages), "body.messages");
